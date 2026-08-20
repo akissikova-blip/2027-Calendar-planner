@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Планер РК · 2027</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0E2A3D; --navy2:#123650; --gold:#D79A2C; --paper:#EFF2F1;
+    --line:#DDE3E1; --line2:#E4E8E7; --text:#232A2E; --muted:#5B6B72;
+    --holiday:#F2C6C0; --transfer:#F5DCA8; --tentative:#F0DEB0; --weekend:#E7EBEC;
+    --school:#1C8FA0; --school2:#8FC4D2;
+    --vacation:#D79A2C; --trip:#1C8FA0; --meeting:#7C5CBF; --other:#78838E;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Inter',system-ui,sans-serif;background:var(--paper);color:var(--text);}
+  .font-display{font-family:'Space Grotesk',sans-serif;}
+  .font-mono{font-family:'IBM Plex Mono',monospace;}
+  #app{display:flex;min-height:100vh;}
+
+  /* ---- sidebar ---- */
+  aside{width:272px;flex-shrink:0;background:var(--navy);color:#DCE7EA;display:flex;flex-direction:column;justify-content:space-between;}
+  @media (max-width:900px){ aside{display:none;} }
+  .side-top{padding:28px 24px 16px;overflow-y:auto;}
+  .brand{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+  .brand-badge{width:32px;height:32px;border-radius:6px;background:var(--gold);color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;}
+  .brand-name{color:#fff;font-weight:600;font-size:18px;}
+  .side-desc{font-size:12px;opacity:.6;line-height:1.5;margin:6px 0 24px;}
+  .btn-primary{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:8px;padding:11px;font-weight:600;font-size:14px;background:var(--gold);color:#1a1200;cursor:pointer;margin-bottom:12px;}
+  .btn-outline{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid #2A4B60;border-radius:8px;padding:9px;font-weight:500;font-size:14px;background:transparent;color:#DCE7EA;cursor:pointer;margin-bottom:28px;}
+  .side-section{margin-bottom:28px;}
+  .side-label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;opacity:.5;font-weight:600;margin-bottom:10px;}
+  .filter-row{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:6px;font-size:14px;cursor:pointer;}
+  .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .legend-row{display:flex;align-items:center;gap:10px;font-size:13px;padding:2px 0;opacity:.85;}
+  .swatch{width:16px;height:16px;border-radius:4px;flex-shrink:0;}
+  .swatch.border{border:1px solid #b9c2c6;}
+  .bar{width:16px;height:6px;border-radius:3px;flex-shrink:0;}
+  .side-bottom{padding:16px 24px;font-size:11px;opacity:.4;line-height:1.5;}
+
+  /* ---- main ---- */
+  main{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:#fff;border-bottom:1px solid var(--line);}
+  @media (max-width:640px){ .topbar{padding:14px 16px;} }
+  .month-nav{display:flex;align-items:center;gap:12px;}
+  .icon-btn{width:32px;height:32px;border:none;background:transparent;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--navy);}
+  .icon-btn:hover{background:#f0f0f0;}
+  .icon-btn:disabled{opacity:.25;cursor:default;}
+  h1.mtitle{font-size:22px;margin:0;font-weight:600;color:var(--navy);}
+  .mtitle .yr{font-size:16px;opacity:.5;font-weight:500;margin-left:6px;}
+  .view-toggle{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .view-toggle button{border:none;background:transparent;padding:7px 14px;font-size:14px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:6px;}
+  .view-toggle button.active{background:var(--navy);color:#fff;}
+  .month-tabs{display:flex;gap:4px;overflow-x:auto;padding:10px 32px;background:#F7F8F7;border-bottom:1px solid var(--line);}
+  @media (max-width:640px){ .month-tabs{padding:10px 16px;} }
+  .month-tab{flex-shrink:0;border:none;background:transparent;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:var(--muted);cursor:pointer;}
+  .month-tab.active{background:var(--navy);color:#fff;}
+
+  .body-flex{flex:1;display:flex;min-height:0;}
+  @media (max-width:1024px){ .body-flex{flex-direction:column;} }
+  .grid-area{flex:1;min-width:0;padding:24px 28px;overflow-y:auto;}
+  @media (max-width:640px){ .grid-area{padding:14px;} }
+
+  .weekday-row{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:6px;}
+  .weekday-row div{text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B8790;padding:6px 0;}
+  .weekday-row div.we{color:#B5301F;}
+  .week-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
+  .day-cell{position:relative;text-align:left;border-radius:10px;padding:6px 8px;min-height:78px;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);cursor:pointer;}
+  .day-cell.we{background:var(--weekend);}
+  .day-cell.holiday{background:var(--holiday);}
+  .day-cell.transfer{background:var(--transfer);}
+  .day-cell.tentative{background:var(--tentative);}
+  .day-cell.selected{border:2px solid var(--navy);}
+  .day-cell.today{border:2px solid var(--gold);}
+  .day-num{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--text);}
+  .day-num.red{color:#B5301F;}
+  .hol-label{font-size:9.5px;line-height:1.2;margin-top:2px;color:#7A3226;}
+  .school-bar{margin-top:auto;height:4px;border-radius:3px;background:var(--school);}
+  .school-bar.tent{background:var(--school2);}
+  .evt-chip{font-size:9.5px;line-height:1.3;padding:1px 5px;border-radius:5px;margin-top:2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:2px;}
+  .evt-more{font-size:9.5px;opacity:.5;padding:0 4px;}
+
+  .empty-day{grid-column:span 1;}
+
+  /* ---- day panel ---- */
+  .day-panel{width:340px;flex-shrink:0;background:#fff;border-left:1px solid var(--line);padding:22px;overflow-y:auto;}
+  @media (max-width:1024px){ .day-panel{width:100%;border-left:none;border-top:1px solid var(--line);} }
+  .weekday-name{font-size:11px;text-transform:uppercase;letter-spacing:.05em;opacity:.5;font-weight:600;margin-bottom:4px;}
+  .day-date{font-size:26px;font-weight:600;color:var(--navy);margin-bottom:16px;}
+  .info-box{border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:10px;display:flex;gap:8px;align-items:flex-start;}
+  .info-box.hol{background:#FBEBE9;color:#5B3A1F;}
+  .info-box.sch{background:#E7F4F7;color:#0E4C58;}
+  .add-day-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;border:2px dashed #C9D1D5;background:transparent;border-radius:8px;padding:9px;font-size:14px;color:var(--muted);cursor:pointer;margin:14px 0;}
+  .evt-card{border:1px solid var(--line2);border-radius:8px;padding:10px 12px;margin-bottom:8px;}
+  .evt-card-top{display:flex;justify-content:space-between;gap:8px;}
+  .evt-left{display:flex;gap:8px;align-items:center;min-width:0;}
+  .evt-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;}
+  .evt-title{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .evt-emp{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .evt-actions{display:flex;gap:4px;flex-shrink:0;}
+  .evt-actions button{border:none;background:transparent;width:22px;height:22px;border-radius:5px;cursor:pointer;color:var(--muted);}
+  .evt-actions button:hover{background:#f0f0f0;}
+  .evt-dates{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9aa5aa;margin-top:6px;padding-left:32px;}
+  .empty-hint{color:#a9b1b5;font-size:14px;text-align:center;padding:26px 0;}
+
+  /* ---- modal ---- */
+  .overlay{position:fixed;inset:0;background:rgba(14,42,61,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px;}
+  .modal{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:24px;width:100%;max-width:440px;max-height:92vh;overflow-y:auto;}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+  .modal-head h2{font-size:18px;margin:0;color:var(--navy);}
+  .close-x{border:none;background:transparent;width:28px;height:28px;border-radius:6px;cursor:pointer;color:var(--muted);}
+  .close-x:hover{background:#f0f0f0;}
+  label.field-label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:6px;}
+  input[type=text], input[type=date], textarea, select{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:14px;font-family:inherit;margin-bottom:14px;}
+  textarea{resize:none;}
+  .type-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+  .type-opt{display:flex;align-items:center;gap:8px;border:2px solid var(--line2);border-radius:8px;padding:9px 10px;font-size:14px;font-weight:500;background:#fff;color:var(--muted);cursor:pointer;}
+  .type-opt.active{border-color:currentColor;}
+  .date-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .hint{font-size:11px;color:#a9b1b5;margin:-8px 0 12px;}
+  .conflict-box{background:#FBEBE9;color:#7A2416;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:14px;}
+  .conflict-box ul{margin:6px 0 0;padding-left:20px;}
+  .conflict-box label{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;font-weight:400;text-transform:none;letter-spacing:0;color:inherit;}
+  .err{color:#c0392b;font-size:12px;margin-bottom:8px;}
+  .modal-actions{display:flex;gap:8px;margin-top:16px;}
+  .btn-ghost{flex:1;border:1px solid var(--line);background:#fff;border-radius:8px;padding:10px;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;}
+  .btn-dark{flex:1;border:none;background:var(--navy);color:#fff;border-radius:8px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;}
+  .btn-dark:disabled{opacity:.4;cursor:default;}
+
+  /* people manager */
+  .people-add{display:flex;gap:8px;margin-bottom:16px;}
+  .people-add input{margin-bottom:0;}
+  .people-add button{border:none;background:var(--navy);color:#fff;border-radius:8px;padding:0 14px;font-size:18px;cursor:pointer;}
+  .person-row{display:flex;align-items:center;gap:8px;border:1px solid var(--line2);border-radius:8px;padding:8px 10px;margin-bottom:8px;}
+  .person-row span{flex:1;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .person-row input{width:120px;margin:0;font-size:12px;padding:6px 8px;}
+  .person-row button{border:none;background:transparent;color:#c0392b;width:26px;height:26px;border-radius:6px;cursor:pointer;}
+  .person-row button:hover{background:#fdecea;}
+
+  /* list view */
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  thead th{text-align:left;padding:10px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:#F7F8F7;}
+  tbody td{padding:10px 14px;border-top:1px solid #EEF1F0;}
+  .list-wrap{border:1px solid var(--line2);border-radius:12px;overflow:hidden;}
+  .type-pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;}
+  .mono-cell{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
+  .row-actions{display:flex;gap:4px;justify-content:flex-end;}
+  .row-actions button{border:none;background:transparent;width:24px;height:24px;border-radius:6px;cursor:pointer;color:var(--muted);}
+  .row-actions button:hover{background:#f0f0f0;}
+  .mobile-fab{display:none;position:fixed;bottom:20px;right:20px;width:52px;height:52px;border-radius:50%;background:var(--gold);border:none;color:#1a1200;font-size:24px;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;z-index:40;}
+  @media (max-width:900px){ .mobile-fab{display:block;} }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ================= Data ================= */
+const YEAR = 2027;
+const MONTHS = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+const WD = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
+const WEEKDAY_FULL = ["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
+
+const PUBLIC_HOLIDAYS = {
+  "2027-01-01":{label:"Новый год",kind:"holiday"},
+  "2027-01-02":{label:"Новый год (2-й день)",kind:"holiday"},
+  "2027-01-04":{label:"Перенос выходного (с 2 января)",kind:"transfer"},
+  "2027-01-07":{label:"Рождество Христово",kind:"holiday"},
+  "2027-03-08":{label:"Международный женский день",kind:"holiday"},
+  "2027-03-15":{label:"День Конституции РК",kind:"holiday"},
+  "2027-03-21":{label:"Наурыз мейрамы",kind:"holiday"},
+  "2027-03-22":{label:"Наурыз мейрамы",kind:"holiday"},
+  "2027-03-23":{label:"Наурыз мейрамы",kind:"holiday"},
+  "2027-03-24":{label:"Перенос выходного (с 21 марта)",kind:"transfer"},
+  "2027-05-01":{label:"Праздник единства народа Казахстана",kind:"holiday"},
+  "2027-05-03":{label:"Перенос выходного (с 1 мая)",kind:"transfer"},
+  "2027-05-07":{label:"День защитника Отечества",kind:"holiday"},
+  "2027-05-09":{label:"День Победы",kind:"holiday"},
+  "2027-05-10":{label:"Перенос выходного (с 9 мая)",kind:"transfer"},
+  "2027-05-16":{label:"Курбан айт (дата предварительна)",kind:"tentative"},
+  "2027-07-06":{label:"День Столицы",kind:"holiday"},
+  "2027-10-25":{label:"День Республики",kind:"holiday"},
+  "2027-12-16":{label:"День Независимости",kind:"holiday"}
+};
+const SCHOOL_RANGES = [
+  {start:"2027-01-01",end:"2027-01-10",label:"Зимние каникулы",confirmed:true},
+  {start:"2027-02-08",end:"2027-02-14",label:"Доп. каникулы (1 кл.)",confirmed:true},
+  {start:"2027-03-22",end:"2027-03-28",label:"Весенние каникулы",confirmed:true},
+  {start:"2027-10-25",end:"2027-10-31",label:"Осенние каникулы (ориентировочно)",confirmed:false},
+  {start:"2027-12-28",end:"2027-12-31",label:"Зимние каникулы (ориентировочно)",confirmed:false}
+];
+const EVENT_TYPES = {
+  vacation:{label:"Отпуск",color:"var(--vacation)",icon:"✈"},
+  trip:{label:"Командировка",color:"var(--trip)",icon:"💼"},
+  meeting:{label:"Совещание",color:"var(--meeting)",icon:"👥"},
+  other:{label:"Другое",color:"var(--other)",icon:"●"}
+};
+
+/* ================= Helpers ================= */
+const pad = n => String(n).padStart(2,"0");
+const iso = (y,m,d) => `${y}-${pad(m+1)}-${pad(d)}`;
+const todayISO = () => { const t=new Date(); return iso(t.getFullYear(),t.getMonth(),t.getDate()); };
+const parseISO = s => { const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); };
+const inRange = (d,s,e) => d>=s && d<=e;
+const overlap = (aS,aE,bS,bE) => aS<=bE && aE>=bS;
+const daysInMonth = (y,m) => new Date(y,m+1,0).getDate();
+const mondayIdx = jsDay => jsDay===0?6:jsDay-1;
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const esc = s => (s||"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function monthGrid(y,m){
+  const first = new Date(y,m,1);
+  const offset = mondayIdx(first.getDay());
+  const total = daysInMonth(y,m);
+  const cells=[];
+  for(let i=0;i<offset;i++) cells.push(null);
+  for(let d=1;d<=total;d++) cells.push(d);
+  while(cells.length%7!==0) cells.push(null);
+  while(cells.length<42) cells.push(null);
+  const weeks=[];
+  for(let i=0;i<cells.length;i+=7) weeks.push(cells.slice(i,i+7));
+  return weeks;
+}
+function schoolInfo(d){ return SCHOOL_RANGES.find(r=>inRange(d,r.start,r.end)) || null; }
+function eventsOnDay(events,d){ return events.filter(e=>inRange(d,e.start,e.end)); }
+function findEmployee(list,name){
+  const n=(name||"").trim().toLowerCase(); if(!n) return null;
+  return list.find(e=>e.name.trim().toLowerCase()===n) || null;
+}
+function findConflicts({events,employees,employeeName,start,end,excludeId}){
+  if(!employeeName||!start||!end) return [];
+  const me = findEmployee(employees,employeeName);
+  const group = me && me.group && me.group.trim();
+  if(!group) return [];
+  const peers = new Set(employees.filter(e=>e.id!==me.id && (e.group||"").trim()===group).map(e=>e.name.trim().toLowerCase()));
+  if(peers.size===0) return [];
+  return events.filter(e=> e.id!==excludeId && e.type==="vacation" && peers.has((e.employee||"").trim().toLowerCase()) && overlap(start,end,e.start,e.end));
+}
+
+/* ================= State ================= */
+const state = {
+  month: (new Date().getFullYear()===YEAR) ? new Date().getMonth() : 0,
+  selected: (todayISO().slice(0,4)===String(YEAR)) ? todayISO() : `${YEAR}-01-01`,
+  view: "grid",
+  typeFilter: new Set(Object.keys(EVENT_TYPES)),
+  events: [],
+  employees: [],
+  formOpen: false,
+  editingId: null,
+  peopleOpen: false,
+  formDraft: null
+};
+
+function load(){
+  try{ state.events = JSON.parse(localStorage.getItem("kz2027-events")||"[]"); }catch(e){ state.events=[]; }
+  try{ state.employees = JSON.parse(localStorage.getItem("kz2027-employees")||"[]"); }catch(e){ state.employees=[]; }
+}
+function persist(){
+  localStorage.setItem("kz2027-events", JSON.stringify(state.events));
+  localStorage.setItem("kz2027-employees", JSON.stringify(state.employees));
+}
+
+function ensureEmployee(name){
+  const trimmed=(name||"").trim(); if(!trimmed) return;
+  if(!findEmployee(state.employees,trimmed)) state.employees.push({id:uid(),name:trimmed,group:""});
+}
+
+/* ================= Render ================= */
+function render(){
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <aside>
+      <div class="side-top">
+        <div class="brand"><div class="brand-badge">РК</div><div class="brand-name">Планер ${YEAR}</div></div>
+        <p class="side-desc">Личный рабочий календарь: госпраздники, каникулы РК и ваши события. Данные хранятся локально в этом браузере.</p>
+        <button class="btn-primary" onclick="openNewEvent(state.selected)">+ Новое событие</button>
+        <button class="btn-outline" onclick="openPeople()">👤 Сотрудники и группы</button>
+        <div class="side-section">
+          <div class="side-label">Ваши события</div>
+          ${Object.entries(EVENT_TYPES).map(([k,t])=>`
+            <div class="filter-row" style="opacity:${state.typeFilter.has(k)?1:.35}" onclick="toggleFilter('${k}')">
+              <span class="dot" style="background:${t.color}"></span><span>${t.icon}</span><span>${t.label}</span>
+            </div>`).join("")}
+        </div>
+        <div class="side-section">
+          <div class="side-label">Обозначения</div>
+          <div class="legend-row"><span class="swatch" style="background:var(--holiday)"></span>Госпраздник</div>
+          <div class="legend-row"><span class="swatch" style="background:var(--transfer)"></span>Перенос выходного</div>
+          <div class="legend-row"><span class="swatch border" style="background:var(--weekend)"></span>Выходной (сб/вс)</div>
+          <div class="legend-row"><span class="bar" style="background:var(--school)"></span>Школьные каникулы</div>
+        </div>
+        ${groupsSection()}
+      </div>
+      <div class="side-bottom">Данные хранятся только в этом браузере (localStorage) — не синхронизируются между устройствами.</div>
+    </aside>
+    <main>
+      <div class="topbar">
+        <div class="month-nav">
+          <button class="icon-btn" ${state.month===0?"disabled":""} onclick="changeMonth(-1)">&#8592;</button>
+          <h1 class="mtitle">${MONTHS[state.month]} <span class="yr font-mono">${YEAR}</span></h1>
+          <button class="icon-btn" ${state.month===11?"disabled":""} onclick="changeMonth(1)">&#8594;</button>
+        </div>
+        <div class="view-toggle">
+          <button class="${state.view==='grid'?'active':''}" onclick="setView('grid')">▦ Сетка</button>
+          <button class="${state.view==='list'?'active':''}" onclick="setView('list')">☰ Список</button>
+        </div>
+      </div>
+      <div class="month-tabs">
+        ${MONTHS.map((m,i)=>`<button class="month-tab ${i===state.month?'active':''}" onclick="goMonth(${i})">${m.slice(0,3).toUpperCase()}</button>`).join("")}
+      </div>
+      <div class="body-flex">
+        <div class="grid-area">${state.view==='grid'?gridHTML():listHTML()}</div>
+        <div class="day-panel">${dayPanelHTML()}</div>
+      </div>
+    </main>
+    <button class="mobile-fab" onclick="openNewEvent(state.selected)">+</button>
+    ${state.formOpen ? formModalHTML() : ""}
+    ${state.peopleOpen ? peopleModalHTML() : ""}
+  `;
+}
+
+function groupsSection(){
+  const groups = [...new Set(state.employees.map(e=>e.group).filter(Boolean))];
+  if(groups.length===0) return "";
+  return `<div class="side-section">
+    <div class="side-label">Группы взаимозаменяемости</div>
+    ${groups.map(g=>`<div class="legend-row" style="justify-content:space-between"><span>${esc(g)}</span><span class="font-mono" style="opacity:.5;font-size:11px">${state.employees.filter(e=>e.group===g).length}</span></div>`).join("")}
+  </div>`;
+}
+
+function visibleEvents(){ return state.events.filter(e=>state.typeFilter.has(e.type)); }
+
+function gridHTML(){
+  const weeks = monthGrid(YEAR, state.month);
+  const today = todayISO();
+  const ev = visibleEvents();
+  let html = `<div class="weekday-row">${WD.map((w,i)=>`<div class="${i>=5?'we':''}">${w}</div>`).join("")}</div>`;
+  weeks.forEach(week=>{
+    html += `<div class="week-row">`;
+    week.forEach((day,di)=>{
+      if(day===null){ html+=`<div></div>`; return; }
+      const d = iso(YEAR, state.month, day);
+      const we = di>=5;
+      const hol = PUBLIC_HOLIDAYS[d];
+      const sch = schoolInfo(d);
+      const dayEv = eventsOnDay(ev,d);
+      const sel = d===state.selected;
+      const isToday = d===today;
+      let cls = "day-cell";
+      if(hol) cls += " "+hol.kind;
+      else if(we) cls += " we";
+      if(sel) cls += " selected"; else if(isToday) cls += " today";
+      html += `<div class="${cls}" onclick="selectDay('${d}')" ondblclick="openNewEvent('${d}')" title="${hol?esc(hol.label):''}">
+        <div class="day-num ${(we||hol)?'red':''}">${day}</div>
+        ${hol?`<div class="hol-label">${esc(hol.label)}</div>`:""}
+        ${sch?`<div class="school-bar ${sch.confirmed?'':'tent'}"></div>`:""}
+        ${dayEv.slice(0,2).map(e=>{
+          const conflict = e.type==="vacation" && findConflicts({events:ev,employees:state.employees,employeeName:e.employee,start:e.start,end:e.end,excludeId:e.id}).length>0;
+          const t = EVENT_TYPES[e.type];
+          return `<div class="evt-chip" style="background:color-mix(in srgb, ${t.color} 15%, white);color:${t.color}">${conflict?'⚠':''}${esc(e.employee||e.title||t.label)}</div>`;
+        }).join("")}
+        ${dayEv.length>2?`<div class="evt-more">+${dayEv.length-2} ещё</div>`:""}
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  return html;
+}
+
+function listHTML(){
+  const ev = [...visibleEvents()].sort((a,b)=>a.start.localeCompare(b.start));
+  if(ev.length===0) return `<div class="empty-hint" style="padding:60px 0">Событий ещё нет. Нажмите «Новое событие», чтобы запланировать отпуск, командировку или встречу.</div>`;
+  return `<div class="list-wrap"><table>
+    <thead><tr><th>Тип</th><th>Название</th><th>Сотрудник</th><th>Начало</th><th>Окончание</th><th></th></tr></thead>
+    <tbody>
+    ${ev.map(e=>{
+      const t = EVENT_TYPES[e.type];
+      const conflicts = e.type==="vacation" ? findConflicts({events:ev,employees:state.employees,employeeName:e.employee,start:e.start,end:e.end,excludeId:e.id}) : [];
+      return `<tr>
+        <td><span class="type-pill" style="background:color-mix(in srgb, ${t.color} 15%, white);color:${t.color}">${t.icon} ${t.label}</span></td>
+        <td>${esc(e.title)||"—"}</td>
+        <td>${conflicts.length?`<span title="Пересекается: ${conflicts.map(c=>esc(c.employee)+' ('+c.start+'–'+c.end+')').join(', ')}">⚠ </span>`:""}${esc(e.employee)||"—"}</td>
+        <td class="mono-cell">${e.start}</td>
+        <td class="mono-cell">${e.end}</td>
+        <td><div class="row-actions">
+          <button onclick="openEditEvent('${e.id}')">✎</button>
+          <button onclick="removeEvent('${e.id}')" style="color:#c0392b">🗑</button>
+        </div></td>
+      </tr>`;
+    }).join("")}
+    </tbody></table></div>`;
+}
+
+function dayPanelHTML(){
+  const d = state.selected;
+  const dt = parseISO(d);
+  const hol = PUBLIC_HOLIDAYS[d];
+  const sch = schoolInfo(d);
+  const dayEv = eventsOnDay(visibleEvents(), d);
+  return `
+    <div class="weekday-name">${WEEKDAY_FULL[dt.getDay()]}</div>
+    <div class="day-date font-display">${dt.getDate()} ${MONTHS[dt.getMonth()].toLowerCase()}</div>
+    ${hol?`<div class="info-box hol">ⓘ ${esc(hol.label)}</div>`:""}
+    ${sch?`<div class="info-box sch">📅 ${esc(sch.label)}${sch.confirmed?"":" — дата ориентировочная"}</div>`:""}
+    <button class="add-day-btn" onclick="openNewEvent('${d}')">+ Добавить событие на этот день</button>
+    ${dayEv.length===0?`<div class="empty-hint">Событий нет</div>`:dayEv.map(e=>{
+      const t=EVENT_TYPES[e.type];
+      return `<div class="evt-card">
+        <div class="evt-card-top">
+          <div class="evt-left">
+            <div class="evt-icon" style="background:color-mix(in srgb, ${t.color} 18%, white);color:${t.color}">${t.icon}</div>
+            <div><div class="evt-title">${esc(e.title)||t.label}</div>${e.employee?`<div class="evt-emp">${esc(e.employee)}</div>`:""}</div>
+          </div>
+          <div class="evt-actions"><button onclick="openEditEvent('${e.id}')">✎</button><button onclick="removeEvent('${e.id}')" style="color:#c0392b">🗑</button></div>
+        </div>
+        <div class="evt-dates">${e.start===e.end?e.start:e.start+" → "+e.end}</div>
+      </div>`;
+    }).join("")}
+  `;
+}
+
+/* ---- Event form modal ---- */
+function formModalHTML(){
+  const editing = state.editingId ? state.events.find(e=>e.id===state.editingId) : null;
+  const draft = state.formDraft;
+  const matched = findEmployee(state.employees, draft.employee);
+  const conflicts = draft.type==="vacation" ? findConflicts({events:state.events,employees:state.employees,employeeName:draft.employee,start:draft.start,end:draft.end,excludeId:editing?editing.id:null}) : [];
+  return `<div class="overlay" onclick="if(event.target===this) closeForm()">
+    <div class="modal">
+      <div class="modal-head"><h2 class="font-display">${editing?"Изменить событие":"Новое событие"}</h2><button class="close-x" onclick="closeForm()">✕</button></div>
+      <label class="field-label">Тип события</label>
+      <div class="type-grid">
+        ${Object.entries(EVENT_TYPES).map(([k,t])=>`
+          <div class="type-opt ${draft.type===k?'active':''}" style="color:${draft.type===k?t.color:'var(--muted)'};border-color:${draft.type===k?t.color:'var(--line2)'}" onclick="setDraftField('type','${k}')">${t.icon} ${t.label}</div>
+        `).join("")}
+      </div>
+      <label class="field-label">Сотрудник</label>
+      <input type="text" id="employee-input" list="employee-options" value="${esc(draft.employee)}" oninput="setDraftField('employee', this.value)" placeholder="Начните вводить имя…">
+      <datalist id="employee-options">${state.employees.map(e=>`<option value="${esc(e.name)}">`).join("")}</datalist>
+      ${draft.employee && !matched ? `<div class="hint">Новый сотрудник — добавится в справочник при сохранении.</div>` : ""}
+      ${matched && !matched.group ? `<div class="hint">У сотрудника не указана группа взаимозаменяемости — проверка пересечений не выполняется.</div>` : ""}
+      <label class="field-label">Название (необязательно)</label>
+      <input type="text" id="title-input" value="${esc(draft.title)}" oninput="setDraftField('title', this.value)" placeholder="Например, Отпуск перед отчётным периодом">
+      <div class="date-grid">
+        <div><label class="field-label">Начало</label><input type="date" min="2027-01-01" max="2027-12-31" value="${draft.start}" oninput="setDraftField('start', this.value)"></div>
+        <div><label class="field-label">Окончание</label><input type="date" min="2027-01-01" max="2027-12-31" value="${draft.end}" oninput="setDraftField('end', this.value)"></div>
+      </div>
+      ${conflicts.length ? `
+        <div class="conflict-box">
+          <div>⚠ Пересечение с отпуском взаимозаменяемого сотрудника (${esc(matched.group)}):</div>
+          <ul>${conflicts.map(c=>`<li>${esc(c.employee)}: ${c.start} → ${c.end}</li>`).join("")}</ul>
+          <label><input type="checkbox" ${draft.override?"checked":""} onchange="setDraftField('override', this.checked)"> Всё равно сохранить (беру ответственность за пересечение)</label>
+        </div>` : ""}
+      <label class="field-label">Заметка</label>
+      <textarea id="note-input" rows="2" oninput="setDraftField('note', this.value)" placeholder="Необязательно">${esc(draft.note)}</textarea>
+      ${draft.error?`<div class="err">${esc(draft.error)}</div>`:""}
+      <div class="modal-actions">
+        <button class="btn-ghost" onclick="closeForm()">Отмена</button>
+        <button class="btn-dark" ${conflicts.length && !draft.override ? "disabled":""} onclick="submitForm()">${editing?"Сохранить":"Добавить"}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function peopleModalHTML(){
+  const groups = [...new Set(state.employees.map(e=>e.group).filter(Boolean))];
+  return `<div class="overlay" onclick="if(event.target===this) closePeople()">
+    <div class="modal">
+      <div class="modal-head"><h2 class="font-display">Сотрудники и группы</h2><button class="close-x" onclick="closePeople()">✕</button></div>
+      <p style="font-size:13px;color:var(--muted);margin-top:0">Сотрудники с одинаковой группой считаются взаимозаменяемыми — приложение не даст поставить им отпуск на пересекающиеся даты.</p>
+      <div class="people-add">
+        <input type="text" id="new-emp-name" placeholder="Имя сотрудника">
+        <input type="text" id="new-emp-group" list="group-options" placeholder="Группа" style="width:120px">
+        <button onclick="addPerson()">+</button>
+      </div>
+      <datalist id="group-options">${groups.map(g=>`<option value="${esc(g)}">`).join("")}</datalist>
+      ${state.employees.length===0?`<div class="empty-hint">Сотрудников пока нет — добавьте здесь или впишите имя прямо в форме события.</div>`:
+        state.employees.map(e=>`<div class="person-row">
+          <span>${esc(e.name)}</span>
+          <input type="text" value="${esc(e.group)}" list="group-options" placeholder="без группы" onchange="updatePersonGroup('${e.id}', this.value)">
+          <button onclick="removePerson('${e.id}')">🗑</button>
+        </div>`).join("")}
+      <button class="btn-dark" style="width:100%;margin-top:8px" onclick="closePeople()">Готово</button>
+    </div>
+  </div>`;
+}
+
+/* ================= Actions ================= */
+/* rerender() repaints the whole app but restores focus + cursor position
+   on the active input afterwards, so typing doesn't get interrupted. */
+function rerender(){
+  const active = document.activeElement;
+  const id = active && active.id;
+  let selStart=null, selEnd=null;
+  if(active && typeof active.selectionStart === "number"){ selStart=active.selectionStart; selEnd=active.selectionEnd; }
+  render();
+  if(id){
+    const el = document.getElementById(id);
+    if(el){
+      el.focus();
+      if(selStart!=null && el.setSelectionRange){ try{ el.setSelectionRange(selStart, selEnd); }catch(e){} }
+    }
+  }
+}
+
+function changeMonth(delta){ state.month = Math.min(11, Math.max(0, state.month+delta)); rerender(); }
+function goMonth(i){ state.month = i; rerender(); }
+function setView(v){ state.view = v; rerender(); }
+function selectDay(d){ state.selected = d; rerender(); }
+function toggleFilter(k){ state.typeFilter.has(k) ? state.typeFilter.delete(k) : state.typeFilter.add(k); rerender(); }
+
+function openNewEvent(dateISO){
+  state.editingId = null;
+  state.selected = dateISO;
+  state.formDraft = { type:"vacation", title:"", employee:"", start:dateISO, end:dateISO, note:"", error:"", override:false };
+  state.formOpen = true;
+  rerender();
+}
+function openEditEvent(id){
+  const e = state.events.find(x=>x.id===id);
+  state.editingId = id;
+  state.formDraft = { type:e.type, title:e.title||"", employee:e.employee||"", start:e.start, end:e.end, note:e.note||"", error:"", override:false };
+  state.formOpen = true;
+  rerender();
+}
+function closeForm(){ state.formOpen=false; state.editingId=null; state.formDraft=null; rerender(); }
+function setDraftField(field,val){
+  state.formDraft[field] = val;
+  if(field!=="override") state.formDraft.override = false;
+  state.formDraft.error = "";
+  rerender();
+}
+function submitForm(){
+  const d = state.formDraft;
+  if(!d.start || !d.end){ d.error="Укажите даты начала и окончания."; rerender(); return; }
+  if(d.end < d.start){ d.error="Дата окончания раньше даты начала."; rerender(); return; }
+  const conflicts = d.type==="vacation" ? findConflicts({events:state.events,employees:state.employees,employeeName:d.employee,start:d.start,end:d.end,excludeId:state.editingId}) : [];
+  if(conflicts.length>0 && !d.override){ d.error="Есть пересечение по датам с взаимозаменяемым сотрудником — измените даты или подтвердите ниже."; rerender(); return; }
+  if(d.employee) ensureEmployee(d.employee.trim());
+  const payload = {type:d.type, title:d.title.trim(), employee:d.employee.trim(), start:d.start, end:d.end, note:d.note.trim()};
+  if(state.editingId){
+    state.events = state.events.map(e=> e.id===state.editingId ? {...e, ...payload} : e);
+  } else {
+    state.events.push({...payload, id:uid()});
+  }
+  persist();
+  closeForm();
+}
+function removeEvent(id){
+  state.events = state.events.filter(e=>e.id!==id);
+  persist();
+  rerender();
+}
+
+function openPeople(){ state.peopleOpen=true; rerender(); }
+function closePeople(){ state.peopleOpen=false; rerender(); }
+function addPerson(){
+  const name = document.getElementById("new-emp-name").value.trim();
+  const group = document.getElementById("new-emp-group").value.trim();
+  if(!name || findEmployee(state.employees,name)) return;
+  state.employees.push({id:uid(), name, group});
+  persist();
+  rerender();
+}
+function updatePersonGroup(id, group){
+  state.employees = state.employees.map(e=> e.id===id ? {...e, group} : e);
+  persist();
+  rerender();
+}
+function removePerson(id){
+  state.employees = state.employees.filter(e=>e.id!==id);
+  persist();
+  rerender();
+}
+
+/* ================= Init ================= */
+load();
+render();
+</script>
+</body>
+</html>
