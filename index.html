@@ -95,7 +95,13 @@
   .year-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
   .year-head h2{font-size:20px;margin:0;color:var(--navy);}
   .year-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  .quarter-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+  @media (max-width:900px){ .quarter-grid{grid-template-columns:1fr;} }
+  .quarter-month{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff;}
+  .quarter-month-title{font-size:16px;font-weight:600;color:var(--navy);text-align:center;margin:0 0 10px;font-family:'Space Grotesk',sans-serif;}
   .mini-month{border:1px solid var(--line);border-radius:10px;padding:10px 10px 8px;background:#fff;cursor:pointer;}
+  .mini-month.current{border:2px solid var(--gold);background:#FFFBF2;box-shadow:0 0 0 3px rgba(215,154,44,0.12);}
+  .current-tag{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--gold);background:rgba(215,154,44,0.15);border-radius:999px;padding:1px 6px;vertical-align:middle;}
   .mini-month:hover{border-color:var(--gold);}
   .mini-month h3{font-size:calc(13px * var(--yfs,1));margin:0 0 8px;color:var(--navy);text-align:center;font-weight:600;}
   .mini-wd{display:grid;grid-template-columns:repeat(7,1fr);gap:1.5px;margin-bottom:3px;}
@@ -488,7 +494,7 @@ const state = {
   year: DEFAULT_YEAR,
   month: (new Date().getFullYear()===DEFAULT_YEAR) ? new Date().getMonth() : 0,
   selected: (todayISO().slice(0,4)===String(DEFAULT_YEAR)) ? todayISO() : `${DEFAULT_YEAR}-01-01`,
-  view: "grid",
+  view: "year",
   typeFilter: new Set(Object.keys(EVENT_TYPES)),
   events: [],
   employees: [],
@@ -657,6 +663,12 @@ function render(){
               <button class="zoom-btn" onclick="fontIn()" title="Крупнее">Aa+</button>
             </div>
           </div>
+        ` : state.view==='quarter' ? `
+          <div class="month-nav">
+            <button class="icon-btn" ${state.month<3?"disabled":""} onclick="changeQuarter(-1)">&#8592;</button>
+            <h1 class="mtitle">${QUARTER_NAMES[Math.floor(state.month/3)]} <span class="yr font-mono">${state.year}</span></h1>
+            <button class="icon-btn" ${state.month>=9?"disabled":""} onclick="changeQuarter(1)">&#8594;</button>
+          </div>
         ` : `
           <div class="month-nav">
             <button class="icon-btn" ${state.month===0?"disabled":""} onclick="changeMonth(-1)">&#8592;</button>
@@ -669,8 +681,9 @@ function render(){
             ${YEARS.map(y=>`<button class="${state.year===y?'active':''}" onclick="setYear(${y})">${y}</button>`).join("")}
           </div>
           <div class="view-toggle">
-            <button class="${state.view==='grid'?'active':''}" onclick="setView('grid')">▦ Месяц</button>
             <button class="${state.view==='year'?'active':''}" onclick="setView('year')">▤ Год</button>
+            <button class="${state.view==='quarter'?'active':''}" onclick="setView('quarter')">▥ Квартал</button>
+            <button class="${state.view==='grid'?'active':''}" onclick="setView('grid')">▦ Месяц</button>
             <button class="${state.view==='list'?'active':''}" onclick="setView('list')">☰ Список</button>
           </div>
         </div>
@@ -680,7 +693,7 @@ function render(){
         ${MONTHS.map((m,i)=>`<button class="month-tab ${i===state.month?'active':''}" onclick="goMonth(${i})">${m.slice(0,3).toUpperCase()}</button>`).join("")}
       </div>` : ""}
       <div class="body-flex">
-        <div class="grid-area">${state.view==='grid'?gridHTML():state.view==='year'?`<div id="year-viewport" class="year-viewport"><div id="year-scale-wrap" class="year-scale-wrap" style="--yfs:${state.yearFontScale}">${yearHTML()}</div></div>`:listHTML()}</div>
+        <div class="grid-area">${state.view==='grid'?gridHTML():state.view==='year'?`<div id="year-viewport" class="year-viewport"><div id="year-scale-wrap" class="year-scale-wrap" style="--yfs:${state.yearFontScale}">${yearHTML()}</div></div>`:state.view==='quarter'?quarterHTML():listHTML()}</div>
         <div class="day-panel">${dayPanelHTML()}</div>
       </div>
     </main>
@@ -704,25 +717,20 @@ function groupsSection(){
 
 function visibleEvents(){ return state.events.filter(e=>state.typeFilter.has(e.type)); }
 
-function gridHTML(){
-  const weeks = monthGrid(state.year, state.month);
+function monthBlockHTML(monthIndex){
+  const weeks = monthGrid(state.year, monthIndex);
   const today = todayISO();
   const ev = visibleEvents();
-  let html = `<div class="range-toolbar">
-    <button class="range-btn ${state.rangeMode?'active':''}" onclick="toggleRangeMode()">🗓 ${state.rangeMode?'Отменить выбор периода':'Выбрать несколько дней'}</button>
-    ${state.rangeMode?`<span class="range-hint">${!state.rangeStart?'Нажмите и потяните по дням, чтобы выбрать период':'Период: '+parseISO(state.rangeStart).getDate()+' '+MONTHS[parseISO(state.rangeStart).getMonth()].toLowerCase()+' → '+parseISO(state.rangeEnd).getDate()+' '+MONTHS[parseISO(state.rangeEnd).getMonth()].toLowerCase()}</span>`:""}
-  </div>`;
-  html += `<div class="weekday-row">${WD.map((w,i)=>`<div class="${i>=5?'we':''}">${w}</div>`).join("")}</div>`;
+  let html = `<div class="weekday-row">${WD.map((w,i)=>`<div class="${i>=5?'we':''}">${w}</div>`).join("")}</div>`;
   weeks.forEach(week=>{
     html += `<div class="week-row">`;
     week.forEach((day,di)=>{
       if(day===null){ html+=`<div></div>`; return; }
-      const d = iso(state.year, state.month, day);
+      const d = iso(state.year, monthIndex, day);
       const we = di>=5;
       const hol = PUBLIC_HOLIDAYS[d];
       const sch = schoolInfo(d);
       const bo = blackoutInfo(d);
-      const pop = POPULAR_DAYS.has(d);
       const dayEv = eventsOnDay(ev,d);
       const sel = d===state.selected;
       const isToday = d===today;
@@ -754,14 +762,37 @@ function gridHTML(){
   return html;
 }
 
+function gridHTML(){
+  let html = `<div class="range-toolbar">
+    <button class="range-btn ${state.rangeMode?'active':''}" onclick="toggleRangeMode()">🗓 ${state.rangeMode?'Отменить выбор периода':'Выбрать несколько дней'}</button>
+    ${state.rangeMode?`<span class="range-hint">${!state.rangeStart?'Нажмите и потяните по дням, чтобы выбрать период':'Период: '+parseISO(state.rangeStart).getDate()+' '+MONTHS[parseISO(state.rangeStart).getMonth()].toLowerCase()+' → '+parseISO(state.rangeEnd).getDate()+' '+MONTHS[parseISO(state.rangeEnd).getMonth()].toLowerCase()}</span>`:""}
+  </div>`;
+  html += monthBlockHTML(state.month);
+  return html;
+}
+
+const QUARTER_NAMES = ["I квартал", "II квартал", "III квартал", "IV квартал"];
+function quarterHTML(){
+  const q = Math.floor(state.month/3);
+  const months = [q*3, q*3+1, q*3+2];
+  return `<div class="quarter-grid">${months.map(m=>`
+    <div class="quarter-month">
+      <h3 class="quarter-month-title">${MONTHS[m]}</h3>
+      ${monthBlockHTML(m)}
+    </div>`).join("")}</div>`;
+}
+
 function yearHTML(){
   const today = todayISO();
   const ev = visibleEvents();
+  const now = new Date();
+  const isCurrentYear = state.year === now.getFullYear();
   let html = `<div class="year-grid">`;
   for(let m=0;m<12;m++){
     const weeks = monthGrid(state.year, m);
-    html += `<div class="mini-month" onclick="goYearMonth(${m})">
-      <h3>${MONTHS[m]}</h3>
+    const isCurrentMonth = isCurrentYear && m===now.getMonth();
+    html += `<div class="mini-month${isCurrentMonth?' current':''}" onclick="goYearMonth(${m})">
+      <h3>${MONTHS[m]}${isCurrentMonth?' <span class="current-tag">сейчас</span>':''}</h3>
       <div class="mini-wd">${WD.map((w,i)=>`<div style="${i>=5?'color:#B5301F':''}">${w}</div>`).join("")}</div>`;
     weeks.forEach(week=>{
       html += `<div class="mini-week">`;
@@ -977,6 +1008,12 @@ function rerender(){
 }
 
 function changeMonth(delta){ state.month = Math.min(11, Math.max(0, state.month+delta)); rerender(); }
+function changeQuarter(delta){
+  const q = Math.floor(state.month/3);
+  const nq = Math.min(3, Math.max(0, q+delta));
+  state.month = nq*3;
+  rerender();
+}
 function goMonth(i){ state.month = i; if(state.view==='year') state.view='grid'; rerender(); }
 function goYearMonth(m){ state.month = m; state.view = 'grid'; rerender(); }
 function pickYearDay(d, m){ state.selected = d; state.month = m; state.view = 'grid'; rerender(); }
@@ -1000,7 +1037,7 @@ function layoutYearZoom(){
   const availW = viewport.clientWidth, availH = viewport.clientHeight;
   const natW = wrap.scrollWidth, natH = wrap.scrollHeight;
   if(availW===0 || availH===0 || natW===0 || natH===0) return;
-  const fitScale = Math.max(0.35, Math.min(availW/natW, availH/natH, 2.5));
+  const fitScale = Math.max(0.1, Math.min(availW/natW, availH/natH, 2.5));
   state.yearFitScale = fitScale;
   wrap.style.zoom = fitScale;
 }
