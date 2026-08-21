@@ -12,7 +12,7 @@
     --line:#DDE3E1; --line2:#E4E8E7; --text:#232A2E; --muted:#5B6B72;
     --holiday:#F2C6C0; --transfer:#F5DCA8; --tentative:#F0DEB0; --weekend:#E7EBEC;
     --school:#1C8FA0; --school2:#8FC4D2;
-    --vacation:#D79A2C; --trip:#1C8FA0; --meeting:#7C5CBF; --other:#78838E;
+    --vacation:#D79A2C; --trip:#1C8FA0; --meeting:#7C5CBF; --other:#78838E; --birthday:#C2577A;
   }
   *{box-sizing:border-box;}
   body{margin:0;font-family:'Inter',system-ui,sans-serif;background:var(--paper);color:var(--text);}
@@ -62,12 +62,17 @@
   @media (max-width:1024px){ .body-flex{flex-direction:column;} }
   .grid-area{flex:1;min-width:0;padding:24px 28px;overflow-y:auto;}
   @media (max-width:640px){ .grid-area{padding:14px;} }
+  .year-viewport{width:100%;height:100%;overflow:auto;}
+  .year-scale-wrap{transform-origin:top left;width:max-content;}
+  .zoom-controls{display:flex;align-items:center;gap:4px;}
+  .zoom-btn{width:26px;height:26px;border:1px solid var(--line);background:#fff;border-radius:6px;font-size:14px;line-height:1;cursor:pointer;color:var(--navy);display:flex;align-items:center;justify-content:center;}
+  .zoom-label{font-size:12px;font-family:'IBM Plex Mono',monospace;color:var(--muted);min-width:52px;text-align:center;}
 
-  .weekday-row{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:6px;}
+  .weekday-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
   .weekday-row div{text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B8790;padding:6px 0;}
   .weekday-row div.we{color:#B5301F;}
   .week-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
-  .day-cell{position:relative;text-align:left;border-radius:10px;padding:6px 8px;min-height:78px;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);cursor:pointer;}
+  .day-cell{position:relative;text-align:left;border-radius:10px;padding:6px 8px;min-height:78px;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);cursor:pointer;user-select:none;-webkit-user-select:none;}
   .day-cell.we{background:var(--weekend);}
   .day-cell.holiday{background:var(--holiday);}
   .day-cell.transfer{background:var(--transfer);}
@@ -77,12 +82,45 @@
   .day-num{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--text);}
   .day-num.red{color:#B5301F;}
   .hol-label{font-size:9.5px;line-height:1.2;margin-top:2px;color:#7A3226;}
-  .school-bar{margin-top:auto;height:4px;border-radius:3px;background:var(--school);}
+  .school-bar{margin-top:auto;height:2px;border-radius:2px;background:var(--school);opacity:.45;}
+  .day-cell.blackout{background-image:repeating-linear-gradient(135deg, rgba(139,58,58,0.12) 0 6px, transparent 6px 12px);}
+  .day-cell.blackout .day-num{color:#8B3A3A;}
   .school-bar.tent{background:var(--school2);}
   .evt-chip{font-size:9.5px;line-height:1.3;padding:1px 5px;border-radius:5px;margin-top:2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:2px;}
   .evt-more{font-size:9.5px;opacity:.5;padding:0 4px;}
 
   .empty-day{grid-column:span 1;}
+
+  /* ---- year view ---- */
+  .year-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .year-head h2{font-size:20px;margin:0;color:var(--navy);}
+  .year-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  @media (max-width:900px){ .year-grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:520px){ .year-grid{grid-template-columns:1fr;} }
+  .mini-month{border:1px solid var(--line);border-radius:10px;padding:10px 10px 8px;background:#fff;cursor:pointer;}
+  .mini-month:hover{border-color:var(--gold);}
+  .mini-month h3{font-size:13px;margin:0 0 8px;color:var(--navy);text-align:center;font-weight:600;}
+  .mini-wd{display:grid;grid-template-columns:repeat(7,1fr);gap:1.5px;margin-bottom:3px;}
+  .mini-wd div{text-align:center;font-size:7px;font-weight:700;color:#9aa5aa;letter-spacing:-0.3px;}
+  .mini-week{display:grid;grid-template-columns:repeat(7,1fr);gap:1.5px;margin-bottom:1.5px;}
+  .mini-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:9.5px;border-radius:4px;position:relative;font-family:'IBM Plex Mono',monospace;color:var(--text);}
+  .mini-day.we{background:var(--weekend);}
+  .mini-day.holiday{background:var(--holiday);color:#7A3226;}
+  .mini-day.transfer{background:var(--transfer);color:#6b4c12;}
+  .mini-day.tentative{background:var(--tentative);color:#6b4c12;}
+  .mini-day.today{outline:1.5px solid var(--gold);outline-offset:-1.5px;}
+  .mini-day.selected{outline:1.5px solid var(--navy);outline-offset:-1.5px;}
+  .mini-dot{position:absolute;bottom:1px;width:3px;height:3px;border-radius:50%;background:var(--navy);}
+  .mini-school{position:absolute;left:2px;right:2px;bottom:1px;height:1px;background:var(--school);opacity:.5;}
+  .mini-day.blackout{background-image:repeating-linear-gradient(135deg, rgba(139,58,58,0.18) 0 4px, transparent 4px 8px);}
+
+  /* ---- range select ---- */
+  .range-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .range-btn{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 14px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:6px;}
+  .range-btn.active{background:var(--gold);border-color:var(--gold);color:#1a1200;}
+  .range-hint{font-size:12.5px;color:var(--muted);}
+  .day-cell.in-range{background:#F6E3BC !important;box-shadow:inset 0 0 0 2px var(--gold);}
+  .day-cell.range-end{box-shadow:inset 0 0 0 2px #B5820F;}
 
   /* ---- day panel ---- */
   .day-panel{width:340px;flex-shrink:0;background:#fff;border-left:1px solid var(--line);padding:22px;overflow-y:auto;}
@@ -91,7 +129,7 @@
   .day-date{font-size:26px;font-weight:600;color:var(--navy);margin-bottom:16px;}
   .info-box{border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:10px;display:flex;gap:8px;align-items:flex-start;}
   .info-box.hol{background:#FBEBE9;color:#5B3A1F;}
-  .info-box.sch{background:#E7F4F7;color:#0E4C58;}
+  .info-box.sch{background:transparent;color:#5B7278;border:1px solid #E4EEF0;font-size:12px;padding:6px 10px;}
   .add-day-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;border:2px dashed #C9D1D5;background:transparent;border-radius:8px;padding:9px;font-size:14px;color:var(--muted);cursor:pointer;margin:14px 0;}
   .evt-card{border:1px solid var(--line2);border-radius:8px;padding:10px 12px;margin-bottom:8px;}
   .evt-card-top{display:flex;justify-content:space-between;gap:8px;}
@@ -158,12 +196,33 @@
 
 <script>
 /* ================= Data ================= */
-const YEAR = 2027;
+const YEARS = [2026, 2027];
 const MONTHS = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
 const WD = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
 const WEEKDAY_FULL = ["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
 
 const PUBLIC_HOLIDAYS = {
+  /* ---- 2026 ---- */
+  "2026-01-01":{label:"Новый год",kind:"holiday"},
+  "2026-01-02":{label:"Новый год",kind:"holiday"},
+  "2026-01-07":{label:"Рождество Христово",kind:"holiday"},
+  "2026-03-08":{label:"Международный женский день",kind:"holiday"},
+  "2026-03-09":{label:"Перенос выходного (с 8 марта)",kind:"transfer"},
+  "2026-03-21":{label:"Наурыз мейрамы",kind:"holiday"},
+  "2026-03-22":{label:"Наурыз мейрамы",kind:"holiday"},
+  "2026-03-23":{label:"Наурыз мейрамы",kind:"holiday"},
+  "2026-03-24":{label:"Перенос выходного (с 21 марта)",kind:"transfer"},
+  "2026-03-25":{label:"Перенос выходного (с 22 марта)",kind:"transfer"},
+  "2026-05-01":{label:"Праздник единства народа Казахстана",kind:"holiday"},
+  "2026-05-07":{label:"День защитника Отечества",kind:"holiday"},
+  "2026-05-09":{label:"День Победы",kind:"holiday"},
+  "2026-05-11":{label:"Перенос выходного (с 9 мая)",kind:"transfer"},
+  "2026-05-27":{label:"Курбан айт",kind:"holiday"},
+  "2026-07-06":{label:"День Столицы",kind:"holiday"},
+  "2026-10-25":{label:"День Республики",kind:"holiday"},
+  "2026-10-26":{label:"Перенос выходного (с 25 октября)",kind:"transfer"},
+  "2026-12-16":{label:"День Независимости",kind:"holiday"},
+  /* ---- 2027 ---- */
   "2027-01-01":{label:"Новый год",kind:"holiday"},
   "2027-01-02":{label:"Новый год (2-й день)",kind:"holiday"},
   "2027-01-04":{label:"Перенос выходного (с 2 января)",kind:"transfer"},
@@ -185,9 +244,17 @@ const PUBLIC_HOLIDAYS = {
   "2027-12-16":{label:"День Независимости",kind:"holiday"}
 };
 const SCHOOL_RANGES = [
+  /* ---- 2025/2026 учебный год ---- */
+  {start:"2026-01-01",end:"2026-01-07",label:"Зимние каникулы",confirmed:true},
+  {start:"2026-02-09",end:"2026-02-15",label:"Доп. каникулы (1 кл.)",confirmed:true},
+  {start:"2026-03-19",end:"2026-03-29",label:"Весенние каникулы",confirmed:true},
+  /* ---- 2026/2027 учебный год ---- */
+  {start:"2026-10-26",end:"2026-11-01",label:"Осенние каникулы",confirmed:true},
+  {start:"2026-12-28",end:"2026-12-31",label:"Зимние каникулы",confirmed:true},
   {start:"2027-01-01",end:"2027-01-10",label:"Зимние каникулы",confirmed:true},
   {start:"2027-02-08",end:"2027-02-14",label:"Доп. каникулы (1 кл.)",confirmed:true},
   {start:"2027-03-22",end:"2027-03-28",label:"Весенние каникулы",confirmed:true},
+  /* ---- 2027/2028 учебный год (приказ выйдет ~июль 2027) ---- */
   {start:"2027-10-25",end:"2027-10-31",label:"Осенние каникулы (ориентировочно)",confirmed:false},
   {start:"2027-12-28",end:"2027-12-31",label:"Зимние каникулы (ориентировочно)",confirmed:false}
 ];
@@ -195,6 +262,7 @@ const EVENT_TYPES = {
   vacation:{label:"Отпуск",color:"var(--vacation)",icon:"✈"},
   trip:{label:"Командировка",color:"var(--trip)",icon:"💼"},
   meeting:{label:"Совещание",color:"var(--meeting)",icon:"👥"},
+  birthday:{label:"День рождения",color:"var(--birthday)",icon:"🎂"},
   other:{label:"Другое",color:"var(--other)",icon:"●"}
 };
 
@@ -209,6 +277,89 @@ const daysInMonth = (y,m) => new Date(y,m+1,0).getDate();
 const mondayIdx = jsDay => jsDay===0?6:jsDay-1;
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const esc = s => (s||"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---- Закрытые периоды для отпусков (повторяются каждый год) ---- */
+const BLACKOUT_RULES = [
+  { fromM:1, fromD:1,  toM:1,  toD:15, label:"Первая половина января — закрытый период для отпусков" },
+  { fromM:12,fromD:16, toM:12, toD:31, label:"Вторая половина декабря — закрытый период для отпусков" }
+];
+function blackoutRangesForYear(y){
+  return BLACKOUT_RULES.map(r=>({
+    start: `${y}-${pad(r.fromM)}-${pad(r.fromD)}`,
+    end:   `${y}-${pad(r.toM)}-${pad(r.toD)}`,
+    label: r.label
+  }));
+}
+const BLACKOUT_RANGES = YEARS.flatMap(blackoutRangesForYear);
+function blackoutInfo(d){ return BLACKOUT_RANGES.find(r=>inRange(d,r.start,r.end)) || null; }
+function findBlackoutConflict(start,end){
+  if(!start||!end) return null;
+  return BLACKOUT_RANGES.find(r=>overlap(start,end,r.start,r.end)) || null;
+}
+/* ---- Мягкая подсказка: тот же сотрудник уже брал отпуск в похожий
+   период (месяц/число ±5 дней) в другом году — не блокирует, просто
+   намекает, что период может быть «востребованным». ---- */
+function monthDayOffset(dateISO){
+  const d = parseISO(dateISO);
+  return d.getMonth()*31 + d.getDate();
+}
+function findRepeatPattern({events, employeeName, start, excludeId}){
+  if(!employeeName || !start) return null;
+  const startOffset = monthDayOffset(start);
+  const startYear = start.slice(0,4);
+  const hit = events.find(e=>{
+    if(e.id===excludeId || e.type!=="vacation") return false;
+    if(!sameName(e.employee, employeeName)) return false;
+    if(e.start.slice(0,4)===startYear) return false; // only compare across different years
+    return Math.abs(monthDayOffset(e.start)-startOffset) <= 5;
+  });
+  return hit || null;
+}
+
+/* ---- «Востребованные» дни: рабочие дни вплотную к длинным
+   праздничным блокам (3+ подряд нерабочих дня). Не блокирует —
+   только мягкая пометка на календаре и подсказка в форме. ---- */
+function isNonWorking(d){
+  const dt = parseISO(d), wd = dt.getDay();
+  return wd===0 || wd===6 || !!PUBLIC_HOLIDAYS[d];
+}
+function computePopularDays(year){
+  const days = [];
+  for(let m=0;m<12;m++){ const total = daysInMonth(year,m); for(let day=1; day<=total; day++) days.push(iso(year,m,day)); }
+  const clusters = [];
+  let i=0;
+  while(i<days.length){
+    if(isNonWorking(days[i])){
+      let j=i; while(j<days.length && isNonWorking(days[j])) j++;
+      if(j-i>=3) clusters.push({start:days[i], end:days[j-1]});
+      i=j;
+    } else i++;
+  }
+  const set = new Set();
+  const BUFFER = 3;
+  clusters.forEach(c=>{
+    const cs = parseISO(c.start), ce = parseISO(c.end);
+    for(let k=1;k<=BUFFER;k++){
+      const before = new Date(cs); before.setDate(before.getDate()-k);
+      const bi = iso(before.getFullYear(), before.getMonth(), before.getDate());
+      if(!isNonWorking(bi)) set.add(bi);
+      const after = new Date(ce); after.setDate(after.getDate()+k);
+      const ai = iso(after.getFullYear(), after.getMonth(), after.getDate());
+      if(!isNonWorking(ai)) set.add(ai);
+    }
+  });
+  return set;
+}
+const POPULAR_DAYS = new Set(YEARS.flatMap(y=>[...computePopularDays(y)]));
+function hasPopularOverlap(start,end){
+  if(!start||!end) return false;
+  let d = parseISO(start); const endDt = parseISO(end);
+  while(d<=endDt){
+    if(POPULAR_DAYS.has(iso(d.getFullYear(),d.getMonth(),d.getDate()))) return true;
+    d.setDate(d.getDate()+1);
+  }
+  return false;
+}
 
 function monthGrid(y,m){
   const first = new Date(y,m,1);
@@ -229,20 +380,116 @@ function findEmployee(list,name){
   const n=(name||"").trim().toLowerCase(); if(!n) return null;
   return list.find(e=>e.name.trim().toLowerCase()===n) || null;
 }
+function employeeGroups(emp){
+  return (emp && emp.group || "").split(",").map(s=>s.trim()).filter(Boolean);
+}
+function sameName(a,b){ return (a||"").trim().toLowerCase() === (b||"").trim().toLowerCase(); }
+
+/* Two kinds of "must not overlap" relations:
+   1) shared functional group (symmetric — any peer in the same tag)
+   2) supervisor <-> deputy (directed pair via employee.reportsTo — does NOT
+      make deputies conflict with each other, only each with the supervisor) */
 function findConflicts({events,employees,employeeName,start,end,excludeId}){
   if(!employeeName||!start||!end) return [];
   const me = findEmployee(employees,employeeName);
-  const group = me && me.group && me.group.trim();
-  if(!group) return [];
-  const peers = new Set(employees.filter(e=>e.id!==me.id && (e.group||"").trim()===group).map(e=>e.name.trim().toLowerCase()));
-  if(peers.size===0) return [];
-  return events.filter(e=> e.id!==excludeId && e.type==="vacation" && peers.has((e.employee||"").trim().toLowerCase()) && overlap(start,end,e.start,e.end));
+  if(!me) return [];
+  const myGroups = employeeGroups(me);
+  const conflictNames = new Set();
+  employees.forEach(other=>{
+    if(other.id===me.id) return;
+    const otherGroups = employeeGroups(other);
+    const sharedGroup = myGroups.some(g=>otherGroups.includes(g));
+    const meIsSupervisorOfOther = other.reportsTo && sameName(other.reportsTo, me.name);
+    const meReportsToOther = me.reportsTo && sameName(me.reportsTo, other.name);
+    if(sharedGroup || meIsSupervisorOfOther || meReportsToOther) conflictNames.add(other.name.trim().toLowerCase());
+  });
+  if(conflictNames.size===0) return [];
+  return events.filter(e=> e.id!==excludeId && e.type==="vacation" && conflictNames.has((e.employee||"").trim().toLowerCase()) && overlap(start,end,e.start,e.end));
+}
+
+/* ---- Фактически использованные дни отпуска — считаются В РАМКАХ
+   ОДНОГО КАЛЕНДАРНОГО ГОДА (как того требует трудовое законодательство:
+   отпуск начисляется и учитывается по годам). Дни отпуска, попавшие
+   в другой год (переходящий через 31 декабря), в этот год не входят.
+   Из дней года учитываются только уже наступившие (по сегодня). ---- */
+function usedVacationDays(employeeName, events, year){
+  const yStart = `${year}-01-01`, yEnd = `${year}-12-31`;
+  const today = todayISO();
+  return (events||[]).reduce((sum,e)=>{
+    if(e.type!=="vacation" || !sameName(e.employee, employeeName)) return sum;
+    const s = e.start > yStart ? e.start : yStart;
+    let en = e.end < yEnd ? e.end : yEnd;
+    if(s > en) return sum;         // отпуск не затрагивает этот год
+    if(s > today) return sum;      // ещё не начался
+    if(en > today) en = today;     // считаем только по сегодня
+    const days = Math.round((parseISO(en) - parseISO(s)) / 86400000) + 1;
+    return sum + Math.max(0, days);
+  }, 0);
+}
+
+/* ---- Напоминания: в день события и за 1 рабочий день до него.
+   «1 рабочий день до» — ближайший предшествующий рабочий день
+   (пропускает выходные и праздники), а не просто «вчера». Работает,
+   пока вкладка с календарём открыта — это статичный сайт без сервера,
+   «настоящие» пуш-уведомления при закрытой вкладке технически
+   невозможны без бэкенда. ---- */
+function isBusinessDay(d){
+  const wd = parseISO(d).getDay();
+  return wd!==0 && wd!==6 && !PUBLIC_HOLIDAYS[d];
+}
+function businessDayBefore(d){
+  const dt = parseISO(d);
+  do{ dt.setDate(dt.getDate()-1); } while(!isBusinessDay(iso(dt.getFullYear(),dt.getMonth(),dt.getDate())));
+  return iso(dt.getFullYear(),dt.getMonth(),dt.getDate());
+}
+function getTodayAlerts(){
+  const today = todayISO();
+  return state.events
+    .filter(e=> e.start===today || businessDayBefore(e.start)===today)
+    .map(e=>({ event:e, kind: e.start===today ? "today" : "reminder" }));
+}
+function checkAndFireNotifications(){
+  if(typeof Notification==="undefined" || Notification.permission!=="granted") return;
+  const today = todayISO();
+  const key = "kz-notified-"+today;
+  let notified = [];
+  try{ notified = JSON.parse(localStorage.getItem(key)||"[]"); }catch(e){}
+  getTodayAlerts().forEach(({event,kind})=>{
+    if(notified.includes(event.id)) return;
+    const t = EVENT_TYPES[event.type];
+    const title = kind==="today" ? `Сегодня: ${t.label}` : `Завтра (рабочий день): ${t.label}`;
+    try{ new Notification(title, { body: `${event.employee||event.title||t.label} — ${event.start}`, tag: event.id }); }catch(e){}
+    notified.push(event.id);
+  });
+  localStorage.setItem(key, JSON.stringify(notified));
+}
+function requestNotifPermission(){
+  if(typeof Notification==="undefined") return;
+  Notification.requestPermission().then(()=>{ checkAndFireNotifications(); rerender(); });
+}
+function dismissNotifBanner(){ state.notifDismissedDate = todayISO(); rerender(); }
+function notifBannerHTML(){
+  const alerts = getTodayAlerts();
+  if(alerts.length===0 || state.notifDismissedDate===todayISO()) return "";
+  const canAsk = typeof Notification!=="undefined" && Notification.permission==="default";
+  return `<div style="background:#FCF3E1;border-bottom:1px solid #E9D6A0;padding:9px 20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <span style="font-weight:600;color:#6b4c12;font-size:13px">🔔 Напоминания:</span>
+    ${alerts.map(({event,kind})=>{
+      const t = EVENT_TYPES[event.type];
+      const label = kind==="today" ? "сегодня" : "завтра (раб. день)";
+      return `<span style="font-size:12.5px;background:#fff;border-radius:999px;padding:3px 10px;color:#6b4c12">${t.icon} ${esc(event.employee||event.title||t.label)} — ${label}</span>`;
+    }).join("")}
+    ${canAsk ? `<button onclick="requestNotifPermission()" style="border:none;background:#6b4c12;color:#fff;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer">Включить уведомления браузера</button>` : ""}
+    <button onclick="dismissNotifBanner()" style="margin-left:auto;border:none;background:transparent;color:#6b4c12;cursor:pointer;font-size:12.5px;text-decoration:underline">Скрыть</button>
+  </div>`;
 }
 
 /* ================= State ================= */
+const DEFAULT_YEAR = YEARS.includes(new Date().getFullYear()) ? new Date().getFullYear() : YEARS[YEARS.length-1];
 const state = {
-  month: (new Date().getFullYear()===YEAR) ? new Date().getMonth() : 0,
-  selected: (todayISO().slice(0,4)===String(YEAR)) ? todayISO() : `${YEAR}-01-01`,
+  year: DEFAULT_YEAR,
+  month: (new Date().getFullYear()===DEFAULT_YEAR) ? new Date().getMonth() : 0,
+  selected: (todayISO().slice(0,4)===String(DEFAULT_YEAR)) ? todayISO() : `${DEFAULT_YEAR}-01-01`,
   view: "grid",
   typeFilter: new Set(Object.keys(EVENT_TYPES)),
   events: [],
@@ -250,12 +497,39 @@ const state = {
   formOpen: false,
   editingId: null,
   peopleOpen: false,
-  formDraft: null
+  rangeMode: false,
+  rangeStart: null,
+  rangeEnd: null,
+  formDraft: null,
+  notifDismissedDate: null,
+  yearZoom: null,      // null = auto-fit; number = manual zoom %
+  yearFitScale: 1
 };
+
+/* Seeded only the very first time (no data saved yet) — matches the org
+   chart described: УСО и МПС (Эквайринг/Эмиссия/Переводы) как функциональные
+   группы, плюс Асель как руководитель, с которым не пересекаются 3 её зама. */
+const DEFAULT_EMPLOYEES = [
+  { name:"Асель",    group:"", reportsTo:"" },
+  { name:"Нурлыбек", group:"УСО", reportsTo:"Асель" },
+  { name:"Антон",    group:"УСО", reportsTo:"" },
+  { name:"Серик",    group:"УСО", reportsTo:"" },
+  { name:"Меруерт",  group:"МПС Эквайринг", reportsTo:"Асель" },
+  { name:"Акжан",    group:"МПС Эквайринг", reportsTo:"" },
+  { name:"Алия",     group:"МПС Эмиссия", reportsTo:"Асель" },
+  { name:"Мира",     group:"МПС Эмиссия", reportsTo:"" },
+  { name:"Жания",    group:"МПС Переводы", reportsTo:"" },
+  { name:"Даулет",   group:"МПС Переводы", reportsTo:"" },
+];
 
 function load(){
   try{ state.events = JSON.parse(localStorage.getItem("kz2027-events")||"[]"); }catch(e){ state.events=[]; }
-  try{ state.employees = JSON.parse(localStorage.getItem("kz2027-employees")||"[]"); }catch(e){ state.employees=[]; }
+  const rawEmp = localStorage.getItem("kz2027-employees");
+  if(rawEmp===null){
+    state.employees = DEFAULT_EMPLOYEES.map(e=>({...e, id:uid()}));
+  } else {
+    try{ const p = JSON.parse(rawEmp); state.employees = Array.isArray(p) ? p : []; }catch(e){ state.employees=[]; }
+  }
 }
 function persist(){
   localStorage.setItem("kz2027-events", JSON.stringify(state.events));
@@ -264,7 +538,7 @@ function persist(){
 
 function ensureEmployee(name){
   const trimmed=(name||"").trim(); if(!trimmed) return;
-  if(!findEmployee(state.employees,trimmed)) state.employees.push({id:uid(),name:trimmed,group:""});
+  if(!findEmployee(state.employees,trimmed)) state.employees.push({id:uid(),name:trimmed,group:"",reportsTo:""});
 }
 
 /* ================= Render ================= */
@@ -273,7 +547,7 @@ function render(){
   app.innerHTML = `
     <aside>
       <div class="side-top">
-        <div class="brand"><div class="brand-badge">РК</div><div class="brand-name">Планер ${YEAR}</div></div>
+        <div class="brand"><div class="brand-badge">РК</div><div class="brand-name">Планер ${state.year}</div></div>
         <p class="side-desc">Личный рабочий календарь: госпраздники, каникулы РК и ваши события. Данные хранятся локально в этом браузере.</p>
         <button class="btn-primary" onclick="openNewEvent(state.selected)">+ Новое событие</button>
         <button class="btn-outline" onclick="openPeople()">👤 Сотрудники и группы</button>
@@ -290,28 +564,50 @@ function render(){
           <div class="legend-row"><span class="swatch" style="background:var(--transfer)"></span>Перенос выходного</div>
           <div class="legend-row"><span class="swatch border" style="background:var(--weekend)"></span>Выходной (сб/вс)</div>
           <div class="legend-row"><span class="bar" style="background:var(--school)"></span>Школьные каникулы</div>
+          <div class="legend-row"><span class="swatch" style="background:repeating-linear-gradient(135deg, rgba(139,58,58,0.4) 0 4px, transparent 4px 8px), #fff"></span>Начало января / конец декабря — желательно избегать отпуск</div>
+          <div class="legend-row"><span style="opacity:.6">★ Повышенный спрос — подсказка при выборе дня и в форме отпуска</span></div>
         </div>
         ${groupsSection()}
       </div>
       <div class="side-bottom">Данные хранятся только в этом браузере (localStorage) — не синхронизируются между устройствами.</div>
     </aside>
     <main>
+      ${notifBannerHTML()}
       <div class="topbar">
-        <div class="month-nav">
-          <button class="icon-btn" ${state.month===0?"disabled":""} onclick="changeMonth(-1)">&#8592;</button>
-          <h1 class="mtitle">${MONTHS[state.month]} <span class="yr font-mono">${YEAR}</span></h1>
-          <button class="icon-btn" ${state.month===11?"disabled":""} onclick="changeMonth(1)">&#8594;</button>
-        </div>
-        <div class="view-toggle">
-          <button class="${state.view==='grid'?'active':''}" onclick="setView('grid')">▦ Сетка</button>
-          <button class="${state.view==='list'?'active':''}" onclick="setView('list')">☰ Список</button>
+        ${state.view==='year' ? `
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <h1 class="mtitle">Весь ${state.year} год</h1>
+            <div class="zoom-controls">
+              <button class="zoom-btn" onclick="zoomOut()" title="Уменьшить">−</button>
+              <span class="zoom-label">${state.yearZoom!=null ? state.yearZoom+'%' : 'Авто ('+Math.round(state.yearFitScale*100)+'%)'}</span>
+              <button class="zoom-btn" onclick="zoomIn()" title="Увеличить">+</button>
+              ${state.yearZoom!=null ? `<button class="zoom-btn" style="width:auto;padding:0 8px;font-size:11px" onclick="zoomReset()" title="Вписать в экран">⤢ Авто</button>` : ""}
+            </div>
+          </div>
+        ` : `
+          <div class="month-nav">
+            <button class="icon-btn" ${state.month===0?"disabled":""} onclick="changeMonth(-1)">&#8592;</button>
+            <h1 class="mtitle">${MONTHS[state.month]} <span class="yr font-mono">${state.year}</span></h1>
+            <button class="icon-btn" ${state.month===11?"disabled":""} onclick="changeMonth(1)">&#8594;</button>
+          </div>
+        `}
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="view-toggle">
+            ${YEARS.map(y=>`<button class="${state.year===y?'active':''}" onclick="setYear(${y})">${y}</button>`).join("")}
+          </div>
+          <div class="view-toggle">
+            <button class="${state.view==='grid'?'active':''}" onclick="setView('grid')">▦ Месяц</button>
+            <button class="${state.view==='year'?'active':''}" onclick="setView('year')">▤ Год</button>
+            <button class="${state.view==='list'?'active':''}" onclick="setView('list')">☰ Список</button>
+          </div>
         </div>
       </div>
+      ${state.view!=='year' ? `
       <div class="month-tabs">
         ${MONTHS.map((m,i)=>`<button class="month-tab ${i===state.month?'active':''}" onclick="goMonth(${i})">${m.slice(0,3).toUpperCase()}</button>`).join("")}
-      </div>
+      </div>` : ""}
       <div class="body-flex">
-        <div class="grid-area">${state.view==='grid'?gridHTML():listHTML()}</div>
+        <div class="grid-area">${state.view==='grid'?gridHTML():state.view==='year'?`<div id="year-viewport" class="year-viewport"><div id="year-scale-wrap" class="year-scale-wrap">${yearHTML()}</div></div>`:listHTML()}</div>
         <div class="day-panel">${dayPanelHTML()}</div>
       </div>
     </main>
@@ -319,40 +615,56 @@ function render(){
     ${state.formOpen ? formModalHTML() : ""}
     ${state.peopleOpen ? peopleModalHTML() : ""}
   `;
+  if(state.view==="year") requestAnimationFrame(layoutYearZoom);
 }
 
 function groupsSection(){
-  const groups = [...new Set(state.employees.map(e=>e.group).filter(Boolean))];
-  if(groups.length===0) return "";
+  const groups = [...new Set(state.employees.flatMap(e=>employeeGroups(e)))];
+  const supervisors = [...new Set(state.employees.map(e=>e.reportsTo).filter(Boolean))];
+  if(groups.length===0 && supervisors.length===0) return "";
   return `<div class="side-section">
     <div class="side-label">Группы взаимозаменяемости</div>
-    ${groups.map(g=>`<div class="legend-row" style="justify-content:space-between"><span>${esc(g)}</span><span class="font-mono" style="opacity:.5;font-size:11px">${state.employees.filter(e=>e.group===g).length}</span></div>`).join("")}
+    ${groups.map(g=>`<div class="legend-row" style="justify-content:space-between"><span>${esc(g)}</span><span class="font-mono" style="opacity:.5;font-size:11px">${state.employees.filter(e=>employeeGroups(e).includes(g)).length}</span></div>`).join("")}
+    ${supervisors.map(s=>`<div class="legend-row" style="justify-content:space-between"><span>${esc(s)} (руководитель)</span><span class="font-mono" style="opacity:.5;font-size:11px">${state.employees.filter(e=>sameName(e.reportsTo,s)).length}</span></div>`).join("")}
   </div>`;
 }
 
 function visibleEvents(){ return state.events.filter(e=>state.typeFilter.has(e.type)); }
 
 function gridHTML(){
-  const weeks = monthGrid(YEAR, state.month);
+  const weeks = monthGrid(state.year, state.month);
   const today = todayISO();
   const ev = visibleEvents();
-  let html = `<div class="weekday-row">${WD.map((w,i)=>`<div class="${i>=5?'we':''}">${w}</div>`).join("")}</div>`;
+  let html = `<div class="range-toolbar">
+    <button class="range-btn ${state.rangeMode?'active':''}" onclick="toggleRangeMode()">🗓 ${state.rangeMode?'Отменить выбор периода':'Выбрать несколько дней'}</button>
+    ${state.rangeMode?`<span class="range-hint">${!state.rangeStart?'Нажмите и потяните по дням, чтобы выбрать период':'Период: '+parseISO(state.rangeStart).getDate()+' '+MONTHS[parseISO(state.rangeStart).getMonth()].toLowerCase()+' → '+parseISO(state.rangeEnd).getDate()+' '+MONTHS[parseISO(state.rangeEnd).getMonth()].toLowerCase()}</span>`:""}
+  </div>`;
+  html += `<div class="weekday-row">${WD.map((w,i)=>`<div class="${i>=5?'we':''}">${w}</div>`).join("")}</div>`;
   weeks.forEach(week=>{
     html += `<div class="week-row">`;
     week.forEach((day,di)=>{
       if(day===null){ html+=`<div></div>`; return; }
-      const d = iso(YEAR, state.month, day);
+      const d = iso(state.year, state.month, day);
       const we = di>=5;
       const hol = PUBLIC_HOLIDAYS[d];
       const sch = schoolInfo(d);
+      const bo = blackoutInfo(d);
+      const pop = POPULAR_DAYS.has(d);
       const dayEv = eventsOnDay(ev,d);
       const sel = d===state.selected;
       const isToday = d===today;
+      const inRange = state.rangeMode && state.rangeStart && d>=state.rangeStart && d<=state.rangeEnd;
       let cls = "day-cell";
       if(hol) cls += " "+hol.kind;
       else if(we) cls += " we";
-      if(sel) cls += " selected"; else if(isToday) cls += " today";
-      html += `<div class="${cls}" onclick="selectDay('${d}')" ondblclick="openNewEvent('${d}')" title="${hol?esc(hol.label):''}">
+      if(bo) cls += " blackout";
+      if(inRange) cls += " in-range";
+      if(inRange && (d===state.rangeStart || d===state.rangeEnd)) cls += " range-end";
+      if(!state.rangeMode){ if(sel) cls += " selected"; else if(isToday) cls += " today"; }
+      const rangeHandlers = state.rangeMode
+        ? `onmousedown="startDrag('${d}')" onmouseenter="dragOver('${d}')" ontouchstart="startDrag('${d}')" ontouchmove="handleTouchMove(event)"`
+        : `onclick="selectDay('${d}')" ondblclick="openNewEvent('${d}')"`;
+      html += `<div class="${cls}" data-date="${d}" ${rangeHandlers} title="${esc([hol?hol.label:'', bo?bo.label:''].filter(Boolean).join(' · '))}">
         <div class="day-num ${(we||hol)?'red':''}">${day}</div>
         ${hol?`<div class="hol-label">${esc(hol.label)}</div>`:""}
         ${sch?`<div class="school-bar ${sch.confirmed?'':'tent'}"></div>`:""}
@@ -369,10 +681,47 @@ function gridHTML(){
   return html;
 }
 
+function yearHTML(){
+  const today = todayISO();
+  const ev = visibleEvents();
+  let html = `<div class="year-grid">`;
+  for(let m=0;m<12;m++){
+    const weeks = monthGrid(state.year, m);
+    html += `<div class="mini-month" onclick="goYearMonth(${m})">
+      <h3>${MONTHS[m]}</h3>
+      <div class="mini-wd">${WD.map((w,i)=>`<div style="${i>=5?'color:#B5301F':''}">${w}</div>`).join("")}</div>`;
+    weeks.forEach(week=>{
+      html += `<div class="mini-week">`;
+      week.forEach((day,di)=>{
+        if(day===null){ html+=`<div></div>`; return; }
+        const d = iso(state.year, m, day);
+        const we = di>=5;
+        const hol = PUBLIC_HOLIDAYS[d];
+        const sch = schoolInfo(d);
+        const bo = blackoutInfo(d);
+        const hasEv = eventsOnDay(ev,d).length>0;
+        let cls = "mini-day";
+        if(hol) cls += " "+hol.kind;
+        else if(we) cls += " we";
+        if(bo) cls += " blackout";
+        if(d===today) cls += " today";
+        if(d===state.selected) cls += " selected";
+        html += `<div class="${cls}" title="${esc([hol?hol.label:'', bo?bo.label:''].filter(Boolean).join(' · '))}" onclick="event.stopPropagation(); pickYearDay('${d}', ${m})">${day}${hasEv?'<span class="mini-dot"></span>':''}${sch?'<span class="mini-school"></span>':''}</div>`;
+      });
+      html += `</div>`;
+    });
+    html += `</div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
 function listHTML(){
-  const ev = [...visibleEvents()].sort((a,b)=>a.start.localeCompare(b.start));
-  if(ev.length===0) return `<div class="empty-hint" style="padding:60px 0">Событий ещё нет. Нажмите «Новое событие», чтобы запланировать отпуск, командировку или встречу.</div>`;
-  return `<div class="list-wrap"><table>
+  const yStart = `${state.year}-01-01`, yEnd = `${state.year}-12-31`;
+  const ev = [...visibleEvents()].filter(e=>overlap(e.start,e.end,yStart,yEnd)).sort((a,b)=>a.start.localeCompare(b.start));
+  const yearNote = `<p style="font-size:12.5px;color:var(--muted);margin:0 0 10px">Показаны события, попадающие в <b>${state.year}</b> год (переключается кнопкой года в шапке).</p>`;
+  if(ev.length===0) return yearNote + `<div class="empty-hint" style="padding:40px 0">Событий за ${state.year} год нет. Нажмите «Новое событие», чтобы запланировать отпуск, командировку или встречу.</div>`;
+  return yearNote + `<div class="list-wrap"><table>
     <thead><tr><th>Тип</th><th>Название</th><th>Сотрудник</th><th>Начало</th><th>Окончание</th><th></th></tr></thead>
     <tbody>
     ${ev.map(e=>{
@@ -394,15 +743,32 @@ function listHTML(){
 }
 
 function dayPanelHTML(){
+  if(state.rangeMode){
+    const s = state.rangeStart, e = state.rangeEnd;
+    return `
+      <div class="weekday-name">Выбор периода</div>
+      <div class="day-date font-display" style="font-size:20px">${
+        !s ? "Потяните по дням в календаре" :
+        parseISO(s).getDate()+" "+MONTHS[parseISO(s).getMonth()].toLowerCase()+" → "+parseISO(e).getDate()+" "+MONTHS[parseISO(e).getMonth()].toLowerCase()
+      }</div>
+      <p style="font-size:13px;color:var(--muted);margin-top:0">Нажмите на день в календаре и, не отпуская, проведите пальцем (или мышью) до последнего дня периода.</p>
+      <button class="add-day-btn" ${(!s)?"disabled style='opacity:.4'":""} onclick="openRangeEvent()">+ Добавить событие на этот период</button>
+      <button class="range-btn" style="width:100%;justify-content:center" onclick="toggleRangeMode()">Отменить выбор</button>
+    `;
+  }
   const d = state.selected;
   const dt = parseISO(d);
   const hol = PUBLIC_HOLIDAYS[d];
   const sch = schoolInfo(d);
+  const bo = blackoutInfo(d);
+  const pop = POPULAR_DAYS.has(d);
   const dayEv = eventsOnDay(visibleEvents(), d);
   return `
     <div class="weekday-name">${WEEKDAY_FULL[dt.getDay()]}</div>
     <div class="day-date font-display">${dt.getDate()} ${MONTHS[dt.getMonth()].toLowerCase()}</div>
     ${hol?`<div class="info-box hol">ⓘ ${esc(hol.label)}</div>`:""}
+    ${bo?`<div class="info-box" style="background:#F5D9D9;color:#7A1F1F">⚠ ${esc(bo.label)} — не запрещено, но желательно согласовать заранее</div>`:""}
+    ${pop?`<div class="info-box" style="background:#FCF3E1;color:#6b4c12">★ Рядом с длинными праздниками — обычно повышенный спрос на отпуск</div>`:""}
     ${sch?`<div class="info-box sch">📅 ${esc(sch.label)}${sch.confirmed?"":" — дата ориентировочная"}</div>`:""}
     <button class="add-day-btn" onclick="openNewEvent('${d}')">+ Добавить событие на этот день</button>
     ${dayEv.length===0?`<div class="empty-hint">Событий нет</div>`:dayEv.map(e=>{
@@ -427,6 +793,10 @@ function formModalHTML(){
   const draft = state.formDraft;
   const matched = findEmployee(state.employees, draft.employee);
   const conflicts = draft.type==="vacation" ? findConflicts({events:state.events,employees:state.employees,employeeName:draft.employee,start:draft.start,end:draft.end,excludeId:editing?editing.id:null}) : [];
+  const blackout = draft.type==="vacation" ? findBlackoutConflict(draft.start, draft.end) : null;
+  const repeatHit = draft.type==="vacation" ? findRepeatPattern({events:state.events, employeeName:draft.employee, start:draft.start, excludeId:editing?editing.id:null}) : null;
+  const popularHit = draft.type==="vacation" && hasPopularOverlap(draft.start, draft.end);
+  const blocked = (conflicts.length && !draft.override);
   return `<div class="overlay" onclick="if(event.target===this) closeForm()">
     <div class="modal">
       <div class="modal-head"><h2 class="font-display">${editing?"Изменить событие":"Новое событие"}</h2><button class="close-x" onclick="closeForm()">✕</button></div>
@@ -440,16 +810,28 @@ function formModalHTML(){
       <input type="text" id="employee-input" list="employee-options" value="${esc(draft.employee)}" oninput="setDraftField('employee', this.value)" placeholder="Начните вводить имя…">
       <datalist id="employee-options">${state.employees.map(e=>`<option value="${esc(e.name)}">`).join("")}</datalist>
       ${draft.employee && !matched ? `<div class="hint">Новый сотрудник — добавится в справочник при сохранении.</div>` : ""}
-      ${matched && !matched.group ? `<div class="hint">У сотрудника не указана группа взаимозаменяемости — проверка пересечений не выполняется.</div>` : ""}
+      ${matched && !matched.group && !matched.reportsTo ? `<div class="hint">У сотрудника не указаны группа или руководитель — проверка пересечений не выполняется.</div>` : ""}
       <label class="field-label">Название (необязательно)</label>
       <input type="text" id="title-input" value="${esc(draft.title)}" oninput="setDraftField('title', this.value)" placeholder="Например, Отпуск перед отчётным периодом">
-      <div class="date-grid">
-        <div><label class="field-label">Начало</label><input type="date" min="2027-01-01" max="2027-12-31" value="${draft.start}" oninput="setDraftField('start', this.value)"></div>
-        <div><label class="field-label">Окончание</label><input type="date" min="2027-01-01" max="2027-12-31" value="${draft.end}" oninput="setDraftField('end', this.value)"></div>
+      <div class="date-grid" style="${draft.type==='birthday'?'grid-template-columns:1fr':''}">
+        <div><label class="field-label">${draft.type==='birthday'?'Дата':'Начало'}</label><input type="date" min="2026-01-01" max="2027-12-31" value="${draft.start}" oninput="setDraftField('start', this.value)"></div>
+        ${draft.type==='birthday' ? "" : `<div><label class="field-label">Окончание</label><input type="date" min="2026-01-01" max="2027-12-31" value="${draft.end}" oninput="setDraftField('end', this.value)"></div>`}
       </div>
+      ${blackout ? `
+        <div class="hint" style="background:#F5D9D9;color:#7A1F1F;border-radius:8px;padding:8px 10px;margin:-4px 0 12px">
+          ⚠ ${esc(blackout.label)}. Отпуск в это время не запрещён, но лучше согласовать заранее.
+        </div>` : ""}
+      ${popularHit ? `
+        <div class="hint" style="background:#FCF3E1;color:#6b4c12;border-radius:8px;padding:8px 10px;margin:-4px 0 12px">
+          ★ Этот период рядом с длинными праздниками — обычно повышенный спрос на отпуск, стоит согласовать очерёдность с командой.
+        </div>` : ""}
+      ${repeatHit ? `
+        <div class="hint" style="background:#FCF3E1;color:#6b4c12;border-radius:8px;padding:8px 10px;margin:-4px 0 12px">
+          💡 У этого сотрудника уже был отпуск в похожий период (${repeatHit.start} → ${repeatHit.end}) в другом году — возможно, период «удачный», стоит проверить справедливость по очереди.
+        </div>` : ""}
       ${conflicts.length ? `
         <div class="conflict-box">
-          <div>⚠ Пересечение с отпуском взаимозаменяемого сотрудника (${esc(matched.group)}):</div>
+          <div>⚠ Пересечение с отпуском взаимозаменяемого сотрудника:</div>
           <ul>${conflicts.map(c=>`<li>${esc(c.employee)}: ${c.start} → ${c.end}</li>`).join("")}</ul>
           <label><input type="checkbox" ${draft.override?"checked":""} onchange="setDraftField('override', this.checked)"> Всё равно сохранить (беру ответственность за пересечение)</label>
         </div>` : ""}
@@ -458,30 +840,45 @@ function formModalHTML(){
       ${draft.error?`<div class="err">${esc(draft.error)}</div>`:""}
       <div class="modal-actions">
         <button class="btn-ghost" onclick="closeForm()">Отмена</button>
-        <button class="btn-dark" ${conflicts.length && !draft.override ? "disabled":""} onclick="submitForm()">${editing?"Сохранить":"Добавить"}</button>
+        <button class="btn-dark" ${blocked ? "disabled":""} onclick="submitForm()">${editing?"Сохранить":"Добавить"}</button>
       </div>
     </div>
   </div>`;
 }
 
 function peopleModalHTML(){
-  const groups = [...new Set(state.employees.map(e=>e.group).filter(Boolean))];
+  const groups = [...new Set(state.employees.flatMap(e=>employeeGroups(e)))];
   return `<div class="overlay" onclick="if(event.target===this) closePeople()">
     <div class="modal">
       <div class="modal-head"><h2 class="font-display">Сотрудники и группы</h2><button class="close-x" onclick="closePeople()">✕</button></div>
-      <p style="font-size:13px;color:var(--muted);margin-top:0">Сотрудники с одинаковой группой считаются взаимозаменяемыми — приложение не даст поставить им отпуск на пересекающиеся даты.</p>
+      <p style="font-size:13px;color:var(--muted);margin-top:0">
+        <b>Группы</b> — сотрудники с общей группой взаимозаменяемы (можно указать несколько групп через запятую, например «МПС Эквайринг, Резерв начальника»).<br>
+        <b>Руководитель</b> — отдельная связь «начальник ↔ заместитель»: они не пересекаются друг с другом, но заместители между собой пересекаться могут.
+      </p>
       <div class="people-add">
         <input type="text" id="new-emp-name" placeholder="Имя сотрудника">
-        <input type="text" id="new-emp-group" list="group-options" placeholder="Группа" style="width:120px">
         <button onclick="addPerson()">+</button>
       </div>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 10px;background:#F0F2F1;border-radius:8px;padding:8px 10px">
+        📊 Дни отпуска ниже посчитаны за <b>${state.year} год</b> (переключается той же кнопкой года в шапке) — по закону отпуск учитывается в рамках календарного года.
+      </p>
       <datalist id="group-options">${groups.map(g=>`<option value="${esc(g)}">`).join("")}</datalist>
+      <datalist id="employee-name-options">${state.employees.map(e=>`<option value="${esc(e.name)}">`).join("")}</datalist>
       ${state.employees.length===0?`<div class="empty-hint">Сотрудников пока нет — добавьте здесь или впишите имя прямо в форме события.</div>`:
-        state.employees.map(e=>`<div class="person-row">
-          <span>${esc(e.name)}</span>
-          <input type="text" value="${esc(e.group)}" list="group-options" placeholder="без группы" onchange="updatePersonGroup('${e.id}', this.value)">
-          <button onclick="removePerson('${e.id}')">🗑</button>
-        </div>`).join("")}
+        state.employees.map(e=>{
+          const used = usedVacationDays(e.name, state.events, state.year);
+          return `<div class="person-row" style="flex-direction:column;align-items:stretch;gap:6px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="flex:1;font-weight:600">${esc(e.name)}</span>
+            <span class="font-mono" style="font-size:11px;color:var(--muted);background:#F0F2F1;border-radius:999px;padding:2px 8px;white-space:nowrap" title="Фактически использовано дней отпуска за ${state.year} год (на сегодня)">🏖 ${used} дн. · ${state.year}</span>
+            <button onclick="removePerson('${e.id}')">🗑</button>
+          </div>
+          <div style="display:flex;gap:6px">
+            <input type="text" value="${esc(e.group)}" list="group-options" placeholder="Группы через запятую" style="flex:1;font-size:12px" onchange="updatePersonField('${e.id}','group', this.value)">
+            <input type="text" value="${esc(e.reportsTo||'')}" list="employee-name-options" placeholder="Руководитель" style="width:110px;font-size:12px" onchange="updatePersonField('${e.id}','reportsTo', this.value)">
+          </div>
+        </div>`;
+        }).join("")}
       <button class="btn-dark" style="width:100%;margin-top:8px" onclick="closePeople()">Готово</button>
     </div>
   </div>`;
@@ -506,9 +903,97 @@ function rerender(){
 }
 
 function changeMonth(delta){ state.month = Math.min(11, Math.max(0, state.month+delta)); rerender(); }
-function goMonth(i){ state.month = i; rerender(); }
+function goMonth(i){ state.month = i; if(state.view==='year') state.view='grid'; rerender(); }
+function goYearMonth(m){ state.month = m; state.view = 'grid'; rerender(); }
+function pickYearDay(d, m){ state.selected = d; state.month = m; state.view = 'grid'; rerender(); }
 function setView(v){ state.view = v; rerender(); }
+function setYear(y){ state.year = y; state.month = 0; state.rangeMode=false; state.rangeStart=null; state.rangeEnd=null; state.yearZoom=null; rerender(); }
+
+/* ---- Year-view zoom: by default everything fits on screen without
+   scrolling ("Авто"); zooming in beyond that switches to scrolling
+   inside the year view only (rest of the UI stays fixed). ---- */
+function layoutYearZoom(){
+  if(state.view!=="year") return;
+  const viewport = document.getElementById("year-viewport");
+  const wrap = document.getElementById("year-scale-wrap");
+  if(!viewport || !wrap) return;
+  wrap.style.zoom = 1;
+  const naturalW = wrap.scrollWidth, naturalH = wrap.scrollHeight;
+  const availW = viewport.clientWidth, availH = viewport.clientHeight;
+  if(naturalW===0 || naturalH===0) return;
+  const fitScale = Math.max(0.35, Math.min(availW/naturalW, availH/naturalH, 1));
+  state.yearFitScale = fitScale;
+  const scale = state.yearZoom!=null ? state.yearZoom/100 : fitScale;
+  wrap.style.zoom = scale;
+}
+function zoomIn(){
+  const base = state.yearZoom!=null ? state.yearZoom : Math.round(state.yearFitScale*100);
+  state.yearZoom = Math.min(200, base+10);
+  rerender();
+}
+function zoomOut(){
+  const base = state.yearZoom!=null ? state.yearZoom : Math.round(state.yearFitScale*100);
+  state.yearZoom = Math.max(35, base-10);
+  rerender();
+}
+function zoomReset(){ state.yearZoom = null; rerender(); }
+window.addEventListener("resize", ()=>{ if(state.view==="year") layoutYearZoom(); });
 function selectDay(d){ state.selected = d; rerender(); }
+function toggleRangeMode(){
+  state.rangeMode = !state.rangeMode;
+  state.rangeStart = null;
+  state.rangeEnd = null;
+  isDragging = false;
+  dragAnchor = null;
+  lastDragDate = null;
+  rerender();
+}
+/* ---- Drag-to-select a period (mouse drag or touch swipe) ---- */
+let isDragging = false;
+let dragAnchor = null;
+let lastDragDate = null;
+function startDrag(d){
+  isDragging = true;
+  dragAnchor = d;
+  lastDragDate = d;
+  state.rangeStart = d;
+  state.rangeEnd = d;
+  state.selected = d;
+  rerender();
+}
+function dragOver(d){
+  if(!isDragging || d===lastDragDate) return;
+  lastDragDate = d;
+  if(d < dragAnchor){ state.rangeStart = d; state.rangeEnd = dragAnchor; }
+  else { state.rangeStart = dragAnchor; state.rangeEnd = d; }
+  rerender();
+}
+function handleTouchMove(ev){
+  if(!isDragging) return;
+  ev.preventDefault();
+  const t = ev.touches[0];
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  const cell = el && el.closest ? el.closest('[data-date]') : null;
+  if(cell) dragOver(cell.getAttribute('data-date'));
+}
+function endDrag(){ isDragging = false; }
+document.addEventListener("mouseup", endDrag);
+document.addEventListener("touchend", endDrag);
+document.addEventListener("touchcancel", endDrag);
+
+function openRangeEvent(){
+  if(!state.rangeStart) return;
+  const start = state.rangeStart;
+  const end = state.rangeEnd || state.rangeStart;
+  state.rangeMode = false;
+  state.rangeStart = null;
+  state.rangeEnd = null;
+  state.editingId = null;
+  state.selected = start;
+  state.formDraft = { type:"vacation", title:"", employee:"", start, end, note:"", error:"", override:false };
+  state.formOpen = true;
+  rerender();
+}
 function toggleFilter(k){ state.typeFilter.has(k) ? state.typeFilter.delete(k) : state.typeFilter.add(k); rerender(); }
 
 function openNewEvent(dateISO){
@@ -530,14 +1015,20 @@ function setDraftField(field,val){
   state.formDraft[field] = val;
   if(field!=="override") state.formDraft.override = false;
   state.formDraft.error = "";
+  // birthdays are always single-day — keep end in sync with start
+  if(state.formDraft.type==="birthday" && (field==="type" || field==="start")){
+    state.formDraft.end = state.formDraft.start;
+  }
   rerender();
 }
 function submitForm(){
   const d = state.formDraft;
   if(!d.start || !d.end){ d.error="Укажите даты начала и окончания."; rerender(); return; }
   if(d.end < d.start){ d.error="Дата окончания раньше даты начала."; rerender(); return; }
-  const conflicts = d.type==="vacation" ? findConflicts({events:state.events,employees:state.employees,employeeName:d.employee,start:d.start,end:d.end,excludeId:state.editingId}) : [];
-  if(conflicts.length>0 && !d.override){ d.error="Есть пересечение по датам с взаимозаменяемым сотрудником — измените даты или подтвердите ниже."; rerender(); return; }
+  if(d.type==="vacation"){
+    const conflicts = findConflicts({events:state.events,employees:state.employees,employeeName:d.employee,start:d.start,end:d.end,excludeId:state.editingId});
+    if(conflicts.length>0 && !d.override){ d.error="Есть пересечение по датам с взаимозаменяемым сотрудником — измените даты или подтвердите ниже."; rerender(); return; }
+  }
   if(d.employee) ensureEmployee(d.employee.trim());
   const payload = {type:d.type, title:d.title.trim(), employee:d.employee.trim(), start:d.start, end:d.end, note:d.note.trim()};
   if(state.editingId){
@@ -557,15 +1048,15 @@ function removeEvent(id){
 function openPeople(){ state.peopleOpen=true; rerender(); }
 function closePeople(){ state.peopleOpen=false; rerender(); }
 function addPerson(){
-  const name = document.getElementById("new-emp-name").value.trim();
-  const group = document.getElementById("new-emp-group").value.trim();
+  const nameEl = document.getElementById("new-emp-name");
+  const name = nameEl.value.trim();
   if(!name || findEmployee(state.employees,name)) return;
-  state.employees.push({id:uid(), name, group});
+  state.employees.push({id:uid(), name, group:"", reportsTo:""});
   persist();
   rerender();
 }
-function updatePersonGroup(id, group){
-  state.employees = state.employees.map(e=> e.id===id ? {...e, group} : e);
+function updatePersonField(id, field, value){
+  state.employees = state.employees.map(e=> e.id===id ? {...e, [field]: value} : e);
   persist();
   rerender();
 }
@@ -578,6 +1069,8 @@ function removePerson(id){
 /* ================= Init ================= */
 load();
 render();
+checkAndFireNotifications();
+setInterval(checkAndFireNotifications, 60*60*1000);
 </script>
 </body>
 </html>
