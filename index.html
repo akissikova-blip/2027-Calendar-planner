@@ -625,11 +625,16 @@ function render(){
         <button class="btn-primary" onclick="openNewEvent(state.selected)">+ Новое событие</button>
         <button class="btn-outline" onclick="openPeople()">👤 Сотрудники и группы</button>
         <div class="side-section">
-          <div class="side-label">Ваши события</div>
+          <div class="side-label">Ваши события <span style="opacity:.5;font-weight:400;text-transform:none">— слои</span></div>
           ${Object.entries(EVENT_TYPES).map(([k,t])=>`
-            <div class="filter-row" style="opacity:${state.typeFilter.has(k)?1:.35}" onclick="toggleFilter('${k}')">
-              <span class="dot" style="background:${t.color}"></span><span>${t.icon}</span><span>${t.label}</span>
+            <div class="filter-row" style="opacity:${state.typeFilter.has(k)?1:.35};justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:10px;flex:1;cursor:pointer" onclick="toggleFilter('${k}')">
+                <span class="dot" style="background:${t.color}"></span><span>${t.icon}</span><span>${t.label}</span>
+              </div>
+              <button onclick="event.stopPropagation(); onlyFilter('${k}')" style="border:none;background:transparent;color:var(--muted);font-size:10.5px;text-decoration:underline;cursor:pointer;white-space:nowrap">только это</button>
             </div>`).join("")}
+          ${state.typeFilter.size < Object.keys(EVENT_TYPES).length ? `<button onclick="resetFilter()" style="width:100%;margin-top:6px;border:1px solid #2A4B60;background:transparent;color:#DCE7EA;border-radius:6px;padding:5px;font-size:11.5px;cursor:pointer">Показать все типы</button>` : ""}
+          <button onclick="copyFilterLink()" style="width:100%;margin-top:6px;border:1px solid #2A4B60;background:transparent;color:#DCE7EA;border-radius:6px;padding:5px;font-size:11.5px;cursor:pointer">🔗 Скопировать ссылку на этот вид</button>
         </div>
         <div class="side-section">
           <div class="side-label">Обозначения</div>
@@ -1103,7 +1108,53 @@ function openRangeEvent(){
   state.formOpen = true;
   rerender();
 }
-function toggleFilter(k){ state.typeFilter.has(k) ? state.typeFilter.delete(k) : state.typeFilter.add(k); rerender(); }
+function toggleFilter(k){
+  state.typeFilter.has(k) ? state.typeFilter.delete(k) : state.typeFilter.add(k);
+  syncFilterURL();
+  rerender();
+}
+/* ---- Слои событий: показать только один тип (например, только
+   отпуска, на фоне обычных праздников/выходных), со ссылкой в адресной
+   строке — можно скопировать, отправить или добавить в закладки, и она
+   откроется сразу с этим фильтром. ---- */
+function onlyFilter(k){
+  state.typeFilter = new Set([k]);
+  syncFilterURL();
+  rerender();
+}
+function resetFilter(){
+  state.typeFilter = new Set(Object.keys(EVENT_TYPES));
+  syncFilterURL();
+  rerender();
+}
+function syncFilterURL(){
+  const all = Object.keys(EVENT_TYPES);
+  const url = new URL(location.href);
+  if(state.typeFilter.size === all.length){
+    url.searchParams.delete("layer");
+  } else {
+    url.searchParams.set("layer", [...state.typeFilter].join(","));
+  }
+  history.replaceState(null, "", url.toString());
+}
+function copyFilterLink(){
+  syncFilterURL();
+  const link = location.href;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(link).then(
+      ()=>alert("Ссылка скопирована:\n"+link),
+      ()=>prompt("Скопируйте ссылку вручную:", link)
+    );
+  } else {
+    prompt("Скопируйте ссылку вручную:", link);
+  }
+}
+function applyFilterFromURL(){
+  const raw = new URLSearchParams(location.search).get("layer");
+  if(!raw) return;
+  const valid = raw.split(",").map(s=>s.trim()).filter(k=>EVENT_TYPES[k]);
+  if(valid.length) state.typeFilter = new Set(valid);
+}
 
 function openNewEvent(dateISO){
   state.editingId = null;
@@ -1177,6 +1228,7 @@ function removePerson(id){
 
 /* ================= Init ================= */
 load();
+applyFilterFromURL();
 render();
 checkAndFireNotifications();
 setInterval(checkAndFireNotifications, 60*60*1000);
