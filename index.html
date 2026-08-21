@@ -104,11 +104,11 @@
   .mini-month.current{border:2px solid var(--gold);background:#FFFBF2;box-shadow:0 0 0 3px rgba(215,154,44,0.12);}
   .current-tag{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--gold);background:rgba(215,154,44,0.15);border-radius:999px;padding:1px 6px;vertical-align:middle;}
   .mini-month:hover{border-color:var(--gold);}
-  .mini-month h3{font-size:calc(13px * var(--yfs,1));margin:0 0 8px;color:var(--navy);text-align:center;font-weight:600;}
+  .mini-month h3{font-size:calc(13px * var(--yfs,1) * var(--fb,1));margin:0 0 8px;color:var(--navy);text-align:center;font-weight:600;}
   .mini-wd{display:grid;grid-template-columns:repeat(7,1fr);gap:1.5px;margin-bottom:3px;}
-  .mini-wd div{text-align:center;font-size:calc(7px * var(--yfs,1));font-weight:700;color:#9aa5aa;letter-spacing:-0.3px;}
+  .mini-wd div{text-align:center;font-size:calc(7px * var(--yfs,1) * var(--fb,1));font-weight:700;color:#9aa5aa;letter-spacing:-0.3px;}
   .mini-week{display:grid;grid-template-columns:repeat(7,1fr);gap:1.5px;margin-bottom:1.5px;}
-  .mini-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:calc(9.5px * var(--yfs,1));border-radius:4px;position:relative;font-family:'IBM Plex Mono',monospace;color:var(--text);}
+  .mini-day{height:calc(16px * var(--yfs,1));display:flex;align-items:center;justify-content:center;font-size:calc(9.5px * var(--yfs,1) * var(--fb,1));border-radius:4px;position:relative;font-family:'IBM Plex Mono',monospace;color:var(--text);}
   .mini-day.we{background:var(--weekend);}
   .mini-day.holiday{background:var(--holiday);color:#7A3226;}
   .mini-day.transfer{background:var(--transfer);color:#6b4c12;}
@@ -699,7 +699,7 @@ function render(){
         ${MONTHS.map((m,i)=>`<button class="month-tab ${i===state.month?'active':''}" onclick="goMonth(${i})">${m.slice(0,3).toUpperCase()}</button>`).join("")}
       </div>` : ""}
       <div class="body-flex">
-        <div class="grid-area">${state.view==='grid'?gridHTML():state.view==='year'?`<div id="year-viewport" class="year-viewport"><div id="year-scale-wrap" class="year-scale-wrap" style="--yfs:${state.yearFontScale}">${yearHTML()}</div></div>`:state.view==='quarter'?quarterHTML():listHTML()}</div>
+        <div class="grid-area">${state.view==='grid'?gridHTML():state.view==='year'?`<div id="year-viewport" class="year-viewport"><div id="year-scale-wrap" class="year-scale-wrap" style="--fb:${state.yearFontScale}">${yearHTML()}</div></div>`:state.view==='quarter'?quarterHTML():listHTML()}</div>
         <div class="day-panel">${dayPanelHTML()}</div>
       </div>
     </main>
@@ -1027,41 +1027,45 @@ function setView(v){ state.view = v; rerender(); }
 function setYear(y){ state.year = y; state.month = 0; state.rangeMode=false; state.rangeStart=null; state.rangeEnd=null; rerender(); }
 
 /* ---- Year-view layout: fixed 3 months per row (4 rows — quarterly
-   layout), scaled up or down to fill the page as evenly as possible
-   with no dead zones and no scrolling. Column count is fixed (not
-   auto-picked anymore); only the scale is computed. Recomputed on
-   every render and on window resize. Text size is a separate,
-   independent control (Aa−/Aa+). ---- */
-/* ---- Year-view layout: fixed 3 months per row (4 rows — quarterly
-   layout). Width always fills the page exactly (via CSS width:100%).
-   Height is then stretched or squeezed independently (non-uniform
-   scale) so the grid ALWAYS matches the available height exactly too —
-   guaranteeing no scrolling in either direction, even if that means
-   month cards end up slightly taller/shorter than square. Recomputed
-   on every render and on window resize. Text size is a separate,
-   independent control (Aa−/Aa+). ---- */
+   layout). Instead of visually squashing the rendered page (which
+   distorted the text), this computes a real geometry scale (--yfs:
+   row height AND font-size together, via CSS custom properties) and
+   re-measures a couple of times until the actual (undistorted) layout
+   height matches the available height exactly — so text stays crisp,
+   only the row height changes, which is why months end up rectangular
+   rather than square. Aa−/Aa+ then apply an extra font-only boost
+   (--fb) on top, without affecting the fit. ---- */
 function layoutYearZoom(){
   if(state.view!=="year") return;
   const viewport = document.getElementById("year-viewport");
   const wrap = document.getElementById("year-scale-wrap");
   const grid = wrap && wrap.querySelector(".year-grid");
   if(!viewport || !wrap || !grid) return;
-  wrap.style.zoom = 1;
   wrap.style.transform = "none";
+  wrap.style.zoom = 1;
   grid.style.gridTemplateColumns = "repeat(3,1fr)";
   const availH = viewport.clientHeight;
-  const natH = wrap.scrollHeight;
-  if(availH===0 || natH===0) return;
-  const scaleY = Math.max(0.1, Math.min(availH/natH, 3));
-  state.yearFitScale = scaleY;
-  wrap.style.transformOrigin = "top left";
-  wrap.style.transform = `scaleY(${scaleY})`;
+  if(availH===0) return;
+
+  let s = 1;
+  for(let i=0;i<3;i++){
+    wrap.style.setProperty("--yfs", s);
+    const natH = wrap.scrollHeight;
+    if(natH===0) break;
+    s = Math.max(0.3, Math.min(s * (availH/natH), 4));
+  }
+  wrap.style.setProperty("--yfs", s);
+  state.yearFitScale = s;
 }
-/* Independent font-size control for the year view — changes the
-   natural size of the text, then layoutYearZoom() re-fits around it
-   automatically, so the page still stays evenly filled. */
-function fontIn(){ state.yearFontScale = Math.min(1.6, +(state.yearFontScale+0.1).toFixed(2)); rerender(); }
-function fontOut(){ state.yearFontScale = Math.max(0.7, +(state.yearFontScale-0.1).toFixed(2)); rerender(); }
+/* Independent font-size boost for the year view — layered on top of
+   the auto-fit row sizing above; only affects text, not the fit. */
+function fontIn(){ state.yearFontScale = Math.min(1.4, +(state.yearFontScale+0.1).toFixed(2)); applyFontBoost(); }
+function fontOut(){ state.yearFontScale = Math.max(0.7, +(state.yearFontScale-0.1).toFixed(2)); applyFontBoost(); }
+function applyFontBoost(){
+  const wrap = document.getElementById("year-scale-wrap");
+  if(wrap) wrap.style.setProperty("--fb", state.yearFontScale);
+  rerender();
+}
 window.addEventListener("resize", ()=>{ if(state.view==="year") layoutYearZoom(); });
 function selectDay(d){ state.selected = d; rerender(); }
 function toggleRangeMode(){
