@@ -95,10 +95,6 @@
   .year-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
   .year-head h2{font-size:20px;margin:0;color:var(--navy);}
   .year-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
-  @media (max-width:900px){ .year-grid{grid-template-columns:repeat(2,1fr);} }
-  @media (max-width:520px){ .year-grid{grid-template-columns:1fr;} }
-  @media (min-width:1300px){ .year-grid{grid-template-columns:repeat(4,1fr);} }
-  @media (min-width:1700px){ .year-grid{grid-template-columns:repeat(6,1fr);} }
   .mini-month{border:1px solid var(--line);border-radius:10px;padding:10px 10px 8px;background:#fff;cursor:pointer;}
   .mini-month:hover{border-color:var(--gold);}
   .mini-month h3{font-size:calc(13px * var(--yfs,1));margin:0 0 8px;color:var(--navy);text-align:center;font-weight:600;}
@@ -504,6 +500,7 @@ const state = {
   rangeEnd: null,
   formDraft: null,
   notifDismissedDate: null,
+  backupBannerDismissed: null,
   yearFitScale: 1,
   yearFontScale: 1   // independent text-size control, 0.7–1.6
 };
@@ -557,6 +554,30 @@ function exportBackup(){
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+  localStorage.setItem("kz-last-backup", todayISO());
+  state.backupBannerDismissed = todayISO();
+  rerender();
+}
+/* ---- Напоминание про бэкап: настоящее авто-скачивание при закрытии
+   вкладки браузеры блокируют (защита от навязчивых сайтов), поэтому
+   вместо него — ненавязчивое напоминание, если копии давно не было. ---- */
+function daysSinceLastBackup(){
+  const last = localStorage.getItem("kz-last-backup");
+  if(!last) return Infinity;
+  return Math.floor((parseISO(todayISO()) - parseISO(last)) / 86400000);
+}
+function dismissBackupBanner(){ state.backupBannerDismissed = todayISO(); rerender(); }
+function backupBannerHTML(){
+  if(state.events.length===0 && state.employees.length===0) return "";
+  if(state.backupBannerDismissed===todayISO()) return "";
+  const days = daysSinceLastBackup();
+  if(days < 3) return "";
+  const msg = days===Infinity ? "Резервной копии ещё не было" : `Последняя копия — ${days} ${days===1?'день':days<5?'дня':'дней'} назад`;
+  return `<div style="background:#E7F4F7;border-bottom:1px solid #C9E4EA;padding:9px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <span style="font-size:13px;color:#0E4C58">💾 ${msg}. Браузер может почистить кэш и стереть данные — стоит сохранить копию.</span>
+    <button onclick="exportBackup()" style="border:none;background:#0E4C58;color:#fff;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer">Скачать копию</button>
+    <button onclick="dismissBackupBanner()" style="margin-left:auto;border:none;background:transparent;color:#0E4C58;cursor:pointer;font-size:12.5px;text-decoration:underline">Скрыть</button>
+  </div>`;
 }
 function importBackup(ev){
   const file = ev.target.files && ev.target.files[0];
@@ -571,6 +592,8 @@ function importBackup(ev){
       state.events = data.events;
       state.employees = data.employees;
       persist();
+      localStorage.setItem("kz-last-backup", todayISO());
+      state.backupBannerDismissed = todayISO();
       rerender();
     }catch(e){
       alert("Не удалось прочитать файл — убедитесь, что это резервная копия, скачанная из этого же приложения.");
@@ -624,6 +647,7 @@ function render(){
     </aside>
     <main>
       ${notifBannerHTML()}
+      ${backupBannerHTML()}
       <div class="topbar">
         ${state.view==='year' ? `
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
@@ -959,13 +983,12 @@ function pickYearDay(d, m){ state.selected = d; state.month = m; state.view = 'g
 function setView(v){ state.view = v; rerender(); }
 function setYear(y){ state.year = y; state.month = 0; state.rangeMode=false; state.rangeStart=null; state.rangeEnd=null; rerender(); }
 
-/* ---- Year-view layout: always auto-fills the page — picks the column
-   count (1/2/3/4/6/12) that leaves the LEAST empty space in both
-   directions for the current window size, then scales the whole thing
-   (up or down, not capped at 100%) so months evenly cover the screen
-   with no dead zones and no scrolling. Not user-editable — recomputed
-   automatically on every render and on window resize. Text size is a
-   separate, independent control (Aa−/Aa+) below. ---- */
+/* ---- Year-view layout: fixed 3 months per row (4 rows — quarterly
+   layout), scaled up or down to fill the page as evenly as possible
+   with no dead zones and no scrolling. Column count is fixed (not
+   auto-picked anymore); only the scale is computed. Recomputed on
+   every render and on window resize. Text size is a separate,
+   independent control (Aa−/Aa+). ---- */
 function layoutYearZoom(){
   if(state.view!=="year") return;
   const viewport = document.getElementById("year-viewport");
@@ -973,20 +996,11 @@ function layoutYearZoom(){
   const grid = wrap && wrap.querySelector(".year-grid");
   if(!viewport || !wrap || !grid) return;
   wrap.style.zoom = 1;
+  grid.style.gridTemplateColumns = "repeat(3,1fr)";
   const availW = viewport.clientWidth, availH = viewport.clientHeight;
-  if(availW===0 || availH===0) return;
-
-  let best = null;
-  [2,3,4,6,12,1].forEach(cols=>{
-    grid.style.gridTemplateColumns = `repeat(${cols},1fr)`;
-    const natW = wrap.scrollWidth, natH = wrap.scrollHeight;
-    if(natW===0 || natH===0) return;
-    const fit = Math.min(availW/natW, availH/natH);
-    if(!best || fit>best.fit) best = { cols, fit };
-  });
-  if(!best) return;
-  grid.style.gridTemplateColumns = `repeat(${best.cols},1fr)`;
-  const fitScale = Math.max(0.35, Math.min(best.fit, 2.5));
+  const natW = wrap.scrollWidth, natH = wrap.scrollHeight;
+  if(availW===0 || availH===0 || natW===0 || natH===0) return;
+  const fitScale = Math.max(0.35, Math.min(availW/natW, availH/natH, 2.5));
   state.yearFitScale = fitScale;
   wrap.style.zoom = fitScale;
 }
