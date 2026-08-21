@@ -151,6 +151,14 @@
   /* ---- modal ---- */
   .overlay{position:fixed;inset:0;background:rgba(14,42,61,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px;}
   .modal{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:24px;width:100%;max-width:440px;max-height:92vh;overflow-y:auto;}
+  .modal-report{max-width:640px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
+  .report-viewport{flex:1;min-height:0;overflow:hidden;}
+  .report-scale-wrap{--rfs:1;}
+  .report-group-title{font-size:calc(13px * var(--rfs,1));font-weight:700;color:var(--navy);margin:14px 0 6px;display:flex;align-items:center;gap:8px;}
+  .report-group-title:first-child{margin-top:0;}
+  .report-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .report-row{display:flex;align-items:center;justify-content:space-between;padding:calc(4px * var(--rfs,1)) 8px;border-radius:6px;font-size:calc(13px * var(--rfs,1));}
+  .report-days{font-family:'IBM Plex Mono',monospace;font-size:calc(11.5px * var(--rfs,1));color:var(--muted);white-space:nowrap;}
   .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
   .modal-head h2{font-size:18px;margin:0;color:var(--navy);}
   .close-x{border:none;background:transparent;width:28px;height:28px;border-radius:6px;cursor:pointer;color:var(--muted);}
@@ -381,6 +389,42 @@ function monthGrid(y,m){
 }
 function schoolInfo(d){ return SCHOOL_RANGES.find(r=>inRange(d,r.start,r.end)) || null; }
 function eventsOnDay(events,d){ return events.filter(e=>inRange(d,e.start,e.end)); }
+
+/* ---- Компактные строки для ячейки дня: отпускники из одной группы
+   на одну и ту же дату схлопываются в одну строку через запятую
+   («МПС Эквайринг: Меруерт, Акжан»), чтобы сразу видеть, кто в
+   отпуске в этот день. Другие типы событий (командировки, встречи,
+   ДР) показываются как обычно, по одному. Красным и значком ⚠
+   помечается только если у кого-то из строки реально есть
+   пересечение с взаимозаменяемым коллегой — не просто "в одной
+   группе", а именно конфликт по датам. ---- */
+function dayChips(dayEv, allVisibleEvents){
+  const vacations = dayEv.filter(e=>e.type==="vacation");
+  const others = dayEv.filter(e=>e.type!=="vacation");
+  const clusters = new Map();
+  vacations.forEach(e=>{
+    const g = employeePrimaryGroup(e.employee);
+    const key = g || ("__solo__"+e.id);
+    if(!clusters.has(key)) clusters.set(key, { group:g, events:[] });
+    clusters.get(key).events.push(e);
+  });
+  const vacationRows = [...clusters.values()].map(c=>{
+    const names = c.events.map(e=>e.employee || EVENT_TYPES.vacation.label);
+    const anyConflict = c.events.some(e=>findConflicts({events:allVisibleEvents,employees:state.employees,employeeName:e.employee,start:e.start,end:e.end,excludeId:e.id}).length>0);
+    return {
+      label: (c.group ? c.group+": " : "") + names.join(", "),
+      color: c.group ? groupColorOf(c.group) : EVENT_TYPES.vacation.color,
+      icon: EVENT_TYPES.vacation.icon,
+      conflict: anyConflict
+    };
+  });
+  const otherRows = others.map(e=>{
+    const t = EVENT_TYPES[e.type];
+    return { label: e.employee||e.title||t.label, color:t.color, icon:t.icon, conflict:false };
+  });
+  return [...vacationRows, ...otherRows];
+}
+
 function findEmployee(list,name){
   const n=(name||"").trim().toLowerCase(); if(!n) return null;
   return list.find(e=>e.name.trim().toLowerCase()===n) || null;
@@ -389,6 +433,26 @@ function employeeGroups(emp){
   return (emp && emp.group || "").split(",").map(s=>s.trim()).filter(Boolean);
 }
 function sameName(a,b){ return (a||"").trim().toLowerCase() === (b||"").trim().toLowerCase(); }
+
+/* ---- Цвет по группе (для заливки отпусков МПС/УСО и т.п.) —
+   детерминированный: одно и то же название группы всегда даёт один
+   и тот же цвет из палитры, без ручной настройки. ---- */
+const GROUP_PALETTE = ["#4C6EF5","#12B886","#E8590C","#AE3EC9","#0C8599","#66A80F","#E64980","#4263EB","#F08C00","#0CA678"];
+function groupColorOf(groupName){
+  if(!groupName) return null;
+  let hash = 0;
+  for(let i=0;i<groupName.length;i++) hash = (hash*31 + groupName.charCodeAt(i)) >>> 0;
+  return GROUP_PALETTE[hash % GROUP_PALETTE.length];
+}
+function employeePrimaryGroup(name){
+  const emp = findEmployee(state.employees, name);
+  if(!emp) return null;
+  return employeeGroups(emp)[0] || null;
+}
+function vacationColorFor(name){
+  const g = employeePrimaryGroup(name);
+  return g ? groupColorOf(g) : EVENT_TYPES.vacation.color;
+}
 
 /* Two kinds of "must not overlap" relations:
    1) shared functional group (symmetric — any peer in the same tag)
@@ -502,6 +566,7 @@ const state = {
   formOpen: false,
   editingId: null,
   peopleOpen: false,
+  reportOpen: false,
   rangeMode: false,
   rangeStart: null,
   rangeEnd: null,
@@ -624,7 +689,8 @@ function render(){
         <div class="brand"><div class="brand-badge">РК</div><div class="brand-name">Планер ${state.year}</div></div>
         <p class="side-desc">Личный рабочий календарь: госпраздники, каникулы РК и ваши события. Данные хранятся локально в этом браузере.</p>
         <button class="btn-primary" onclick="openNewEvent(state.selected)">+ Новое событие</button>
-        <button class="btn-outline" onclick="openPeople()">👤 Сотрудники и группы</button>
+        <button class="btn-outline" style="margin-bottom:8px" onclick="openPeople()">👤 Сотрудники и группы</button>
+        <button class="btn-outline" onclick="openReport()">📋 Список по группам</button>
         <div class="side-section">
           <div class="side-label">Ваши события <span style="opacity:.5;font-weight:400;text-transform:none">— слои</span></div>
           ${Object.entries(EVENT_TYPES).map(([k,t])=>`
@@ -706,8 +772,10 @@ function render(){
     <button class="mobile-fab" onclick="openNewEvent(state.selected)">+</button>
     ${state.formOpen ? formModalHTML() : ""}
     ${state.peopleOpen ? peopleModalHTML() : ""}
+    ${state.reportOpen ? reportModalHTML() : ""}
   `;
   if(state.view==="year") requestAnimationFrame(layoutYearZoom);
+  if(state.reportOpen) requestAnimationFrame(layoutReportFit);
 }
 
 function groupsSection(){
@@ -755,12 +823,14 @@ function monthBlockHTML(monthIndex){
         <div class="day-num ${(we||hol)?'red':''}">${day}</div>
         ${hol?`<div class="hol-label">${esc(hol.label)}</div>`:""}
         ${sch?`<div class="school-bar ${sch.confirmed?'':'tent'}"></div>`:""}
-        ${dayEv.slice(0,2).map(e=>{
-          const conflict = e.type==="vacation" && findConflicts({events:ev,employees:state.employees,employeeName:e.employee,start:e.start,end:e.end,excludeId:e.id}).length>0;
-          const t = EVENT_TYPES[e.type];
-          return `<div class="evt-chip" style="background:color-mix(in srgb, ${t.color} 15%, white);color:${t.color}">${conflict?'⚠':''}${esc(e.employee||e.title||t.label)}</div>`;
-        }).join("")}
-        ${dayEv.length>2?`<div class="evt-more">+${dayEv.length-2} ещё</div>`:""}
+        ${(()=>{
+          const rows = dayChips(dayEv, ev);
+          return rows.slice(0,2).map(r=>{
+            const bg = r.conflict ? "#F5D9D9" : `color-mix(in srgb, ${r.color} 15%, white)`;
+            const fg = r.conflict ? "#7A1F1F" : r.color;
+            return `<div class="evt-chip" style="background:${bg};color:${fg}" title="${esc(r.label)}">${r.conflict?'⚠ ':''}${esc(r.label)}</div>`;
+          }).join("") + (rows.length>2?`<div class="evt-more">+${rows.length-2} ещё</div>`:"");
+        })()}
       </div>`;
     });
     html += `</div>`;
@@ -977,8 +1047,11 @@ function peopleModalHTML(){
         state.employees.map(e=>{
           const used = usedVacationDays(e.name, state.events, state.year);
           const otherNames = state.employees.filter(x=>x.id!==e.id);
+          const primaryGroup = employeeGroups(e)[0];
+          const dotColor = primaryGroup ? groupColorOf(primaryGroup) : "#C9D1D5";
           return `<div class="person-row" style="flex-direction:column;align-items:stretch;gap:6px">
           <div style="display:flex;align-items:center;gap:8px">
+            <span class="report-dot" style="background:${dotColor}" title="${primaryGroup?esc(primaryGroup):'Без группы'}"></span>
             <span style="flex:1;font-weight:600">${esc(e.name)}</span>
             <span class="font-mono" style="font-size:11px;color:var(--muted);background:#F0F2F1;border-radius:999px;padding:2px 8px;white-space:nowrap" title="Фактически использовано дней отпуска за ${state.year} год (на сегодня)">🏖 ${used} дн. · ${state.year}</span>
             <button onclick="removePerson('${e.id}')">🗑</button>
@@ -991,6 +1064,46 @@ function peopleModalHTML(){
         </div>`;
         }).join("")}
       <button class="btn-dark" style="width:100%;margin-top:8px" onclick="closePeople()">Готово</button>
+    </div>
+  </div>`;
+}
+
+function reportModalHTML(){
+  const groups = [...new Set(state.employees.flatMap(e=>employeeGroups(e)))].sort((a,b)=>a.localeCompare(b,'ru'));
+  const grouped = groups.map(g=>({
+    group: g,
+    color: groupColorOf(g),
+    members: state.employees.filter(e=>employeeGroups(e).includes(g)).sort((a,b)=>a.name.localeCompare(b.name,'ru'))
+  }));
+  const noGroup = state.employees.filter(e=>employeeGroups(e).length===0).sort((a,b)=>a.name.localeCompare(b.name,'ru'));
+
+  const rowsHTML = (list)=>list.map(e=>`
+    <div class="report-row">
+      <span>${esc(e.name)}</span>
+      <span class="report-days">🏖 ${usedVacationDays(e.name, state.events, state.year)} дн.</span>
+    </div>`).join("");
+
+  const body = state.employees.length===0
+    ? `<div class="empty-hint">Сотрудников пока нет — добавьте их в разделе «Сотрудники и группы».</div>`
+    : grouped.map(g=>`
+        <div class="report-group-title"><span class="report-dot" style="background:${g.color}"></span>${esc(g.group)} <span style="font-weight:400;color:var(--muted);font-size:0.85em">(${g.members.length})</span></div>
+        ${rowsHTML(g.members)}
+      `).join("") + (noGroup.length ? `
+        <div class="report-group-title"><span class="report-dot" style="background:#B9C2C6"></span>Без группы</div>
+        ${rowsHTML(noGroup)}
+      ` : "");
+
+  return `<div class="overlay" onclick="if(event.target===this) closeReport()">
+    <div class="modal modal-report">
+      <div class="modal-head" style="flex-shrink:0">
+        <h2 class="font-display">Список по группам <span class="font-mono" style="font-size:14px;opacity:.5">· ${state.year}</span></h2>
+        <button class="close-x" onclick="closeReport()">✕</button>
+      </div>
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 8px;flex-shrink:0">🏖 — фактически использовано дней отпуска за ${state.year} год (на сегодня).</p>
+      <div id="report-viewport" class="report-viewport">
+        <div id="report-scale-wrap" class="report-scale-wrap">${body}</div>
+      </div>
+      <button class="btn-dark" style="width:100%;margin-top:12px;flex-shrink:0" onclick="closeReport()">Готово</button>
     </div>
   </div>`;
 }
@@ -1222,6 +1335,29 @@ function removeEvent(id){
 
 function openPeople(){ state.peopleOpen=true; rerender(); }
 function closePeople(){ state.peopleOpen=false; rerender(); }
+function openReport(){ state.reportOpen=true; rerender(); }
+function closeReport(){ state.reportOpen=false; rerender(); }
+/* ---- Автоподбор шрифта для отчёта, чтобы список сотрудников по
+   группам всегда помещался в модалку одним экраном, без прокрутки —
+   тот же приём, что и в годовом виде: реальный (не искажённый)
+   размер текста, посчитанный под доступную высоту. ---- */
+function layoutReportFit(){
+  const viewport = document.getElementById("report-viewport");
+  const wrap = document.getElementById("report-scale-wrap");
+  if(!viewport || !wrap) return;
+  const availH = viewport.clientHeight;
+  if(availH===0) return;
+  let s = 1;
+  for(let i=0;i<3;i++){
+    wrap.style.setProperty("--rfs", s);
+    const natH = wrap.scrollHeight;
+    if(natH===0) break;
+    if(natH<=availH) break; // fits — don't force-enlarge small lists
+    s = Math.max(0.55, s * (availH/natH));
+  }
+  wrap.style.setProperty("--rfs", s);
+}
+window.addEventListener("resize", ()=>{ if(state.reportOpen) layoutReportFit(); });
 function addPerson(){
   const nameEl = document.getElementById("new-emp-name");
   const name = nameEl.value.trim();
