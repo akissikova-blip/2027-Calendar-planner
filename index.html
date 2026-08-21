@@ -63,7 +63,7 @@
   .grid-area{flex:1;min-width:0;padding:24px 28px;overflow-y:auto;}
   @media (max-width:640px){ .grid-area{padding:14px;} }
   .year-viewport{width:100%;height:100%;overflow:auto;}
-  .year-scale-wrap{transform-origin:top left;width:max-content;}
+  .year-scale-wrap{transform-origin:top left;width:100%;}
   .zoom-controls{display:flex;align-items:center;gap:4px;}
   .zoom-btn{width:26px;height:26px;border:1px solid var(--line);background:#fff;border-radius:6px;font-size:14px;line-height:1;cursor:pointer;color:var(--navy);display:flex;align-items:center;justify-content:center;}
   .zoom-label{font-size:12px;font-family:'IBM Plex Mono',monospace;color:var(--muted);min-width:52px;text-align:center;}
@@ -97,6 +97,8 @@
   .year-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
   @media (max-width:900px){ .year-grid{grid-template-columns:repeat(2,1fr);} }
   @media (max-width:520px){ .year-grid{grid-template-columns:1fr;} }
+  @media (min-width:1300px){ .year-grid{grid-template-columns:repeat(4,1fr);} }
+  @media (min-width:1700px){ .year-grid{grid-template-columns:repeat(6,1fr);} }
   .mini-month{border:1px solid var(--line);border-radius:10px;padding:10px 10px 8px;background:#fff;cursor:pointer;}
   .mini-month:hover{border-color:var(--gold);}
   .mini-month h3{font-size:13px;margin:0 0 8px;color:var(--navy);text-align:center;font-weight:600;}
@@ -852,8 +854,8 @@ function peopleModalHTML(){
     <div class="modal">
       <div class="modal-head"><h2 class="font-display">Сотрудники и группы</h2><button class="close-x" onclick="closePeople()">✕</button></div>
       <p style="font-size:13px;color:var(--muted);margin-top:0">
-        <b>Группы</b> — сотрудники с общей группой взаимозаменяемы (можно указать несколько групп через запятую, например «МПС Эквайринг, Резерв начальника»).<br>
-        <b>Руководитель</b> — отдельная связь «начальник ↔ заместитель»: они не пересекаются друг с другом, но заместители между собой пересекаться могут.
+        <b>Группа</b> — придумайте общий ярлык для взаимозаменяемых сотрудников (например «Смена А»). У кого он совпадает дословно — не смогут взять отпуск на одни даты. Через запятую можно вписать несколько.<br><br>
+        <b>Чей заместитель</b> — впишите имя начальника <u>в строке подчинённого</u>. Пример: если Нурлыбек подчиняется Кисиковой — в поле у <u>Нурлыбека</u> пишем «Кисикова». Тогда именно эти двое не пересекутся по отпуску, а другие заместители того же начальника — могут.
       </p>
       <div class="people-add">
         <input type="text" id="new-emp-name" placeholder="Имя сотрудника">
@@ -863,10 +865,10 @@ function peopleModalHTML(){
         📊 Дни отпуска ниже посчитаны за <b>${state.year} год</b> (переключается той же кнопкой года в шапке) — по закону отпуск учитывается в рамках календарного года.
       </p>
       <datalist id="group-options">${groups.map(g=>`<option value="${esc(g)}">`).join("")}</datalist>
-      <datalist id="employee-name-options">${state.employees.map(e=>`<option value="${esc(e.name)}">`).join("")}</datalist>
       ${state.employees.length===0?`<div class="empty-hint">Сотрудников пока нет — добавьте здесь или впишите имя прямо в форме события.</div>`:
         state.employees.map(e=>{
           const used = usedVacationDays(e.name, state.events, state.year);
+          const otherNames = state.employees.filter(x=>x.id!==e.id);
           return `<div class="person-row" style="flex-direction:column;align-items:stretch;gap:6px">
           <div style="display:flex;align-items:center;gap:8px">
             <span style="flex:1;font-weight:600">${esc(e.name)}</span>
@@ -874,8 +876,9 @@ function peopleModalHTML(){
             <button onclick="removePerson('${e.id}')">🗑</button>
           </div>
           <div style="display:flex;gap:6px">
-            <input type="text" value="${esc(e.group)}" list="group-options" placeholder="Группы через запятую" style="flex:1;font-size:12px" onchange="updatePersonField('${e.id}','group', this.value)">
-            <input type="text" value="${esc(e.reportsTo||'')}" list="employee-name-options" placeholder="Руководитель" style="width:110px;font-size:12px" onchange="updatePersonField('${e.id}','reportsTo', this.value)">
+            <input type="text" value="${esc(e.group)}" list="group-options" placeholder="Группа (свой ярлык)" style="flex:1;font-size:12px" onchange="updatePersonField('${e.id}','group', this.value)">
+            <input type="text" value="${esc(e.reportsTo||'')}" list="boss-options-${e.id}" placeholder="Чей заместитель" style="width:130px;font-size:12px" onchange="updatePersonField('${e.id}','reportsTo', this.value)">
+            <datalist id="boss-options-${e.id}">${otherNames.map(o=>`<option value="${esc(o.name)}">`).join("")}</datalist>
           </div>
         </div>`;
         }).join("")}
