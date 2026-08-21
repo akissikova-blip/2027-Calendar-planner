@@ -15,10 +15,11 @@
     --vacation:#D79A2C; --trip:#1C8FA0; --meeting:#7C5CBF; --other:#78838E; --birthday:#C2577A;
   }
   *{box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;}
   body{margin:0;font-family:'Inter',system-ui,sans-serif;background:var(--paper);color:var(--text);}
   .font-display{font-family:'Space Grotesk',sans-serif;}
   .font-mono{font-family:'IBM Plex Mono',monospace;}
-  #app{display:flex;min-height:100vh;}
+  #app{display:flex;height:100vh;overflow:hidden;}
 
   /* ---- sidebar ---- */
   aside{width:272px;flex-shrink:0;background:var(--navy);color:#DCE7EA;display:flex;flex-direction:column;justify-content:space-between;}
@@ -41,7 +42,7 @@
   .side-bottom{padding:16px 24px;font-size:11px;opacity:.4;line-height:1.5;}
 
   /* ---- main ---- */
-  main{flex:1;min-width:0;display:flex;flex-direction:column;}
+  main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;}
   .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:#fff;border-bottom:1px solid var(--line);}
   @media (max-width:640px){ .topbar{padding:14px 16px;} }
   .month-nav{display:flex;align-items:center;gap:12px;}
@@ -62,7 +63,7 @@
   @media (max-width:1024px){ .body-flex{flex-direction:column;} }
   .grid-area{flex:1;min-width:0;padding:24px 28px;overflow-y:auto;}
   @media (max-width:640px){ .grid-area{padding:14px;} }
-  .year-viewport{width:100%;height:100%;overflow:auto;}
+  .year-viewport{width:100%;height:100%;overflow:hidden;}
   .year-scale-wrap{transform-origin:top left;width:100%;}
   .zoom-controls{display:flex;align-items:center;gap:4px;}
   .zoom-btn{width:26px;height:26px;border:1px solid var(--line);background:#fff;border-radius:6px;font-size:14px;line-height:1;cursor:pointer;color:var(--navy);display:flex;align-items:center;justify-content:center;}
@@ -1031,6 +1032,14 @@ function setYear(y){ state.year = y; state.month = 0; state.rangeMode=false; sta
    auto-picked anymore); only the scale is computed. Recomputed on
    every render and on window resize. Text size is a separate,
    independent control (Aa−/Aa+). ---- */
+/* ---- Year-view layout: fixed 3 months per row (4 rows — quarterly
+   layout). Width always fills the page exactly (via CSS width:100%).
+   Height is then stretched or squeezed independently (non-uniform
+   scale) so the grid ALWAYS matches the available height exactly too —
+   guaranteeing no scrolling in either direction, even if that means
+   month cards end up slightly taller/shorter than square. Recomputed
+   on every render and on window resize. Text size is a separate,
+   independent control (Aa−/Aa+). ---- */
 function layoutYearZoom(){
   if(state.view!=="year") return;
   const viewport = document.getElementById("year-viewport");
@@ -1038,13 +1047,15 @@ function layoutYearZoom(){
   const grid = wrap && wrap.querySelector(".year-grid");
   if(!viewport || !wrap || !grid) return;
   wrap.style.zoom = 1;
+  wrap.style.transform = "none";
   grid.style.gridTemplateColumns = "repeat(3,1fr)";
-  const availW = viewport.clientWidth, availH = viewport.clientHeight;
-  const natW = wrap.scrollWidth, natH = wrap.scrollHeight;
-  if(availW===0 || availH===0 || natW===0 || natH===0) return;
-  const fitScale = Math.max(0.1, Math.min(availW/natW, availH/natH, 2.5));
-  state.yearFitScale = fitScale;
-  wrap.style.zoom = fitScale;
+  const availH = viewport.clientHeight;
+  const natH = wrap.scrollHeight;
+  if(availH===0 || natH===0) return;
+  const scaleY = Math.max(0.1, Math.min(availH/natH, 3));
+  state.yearFitScale = scaleY;
+  wrap.style.transformOrigin = "top left";
+  wrap.style.transform = `scaleY(${scaleY})`;
 }
 /* Independent font-size control for the year view — changes the
    natural size of the text, then layoutYearZoom() re-fits around it
